@@ -3,6 +3,8 @@ name: plan
 description: Plan features, fixes, or chores with TDD approach. Creates a clean branch, assesses change type (feat/fix/chore), analyzes architecture, and produces a plan with tests written first. Use when starting any non-trivial work.
 ---
 
+> **⚠️ WIP / BETA** - This skill is under development and not fully tested. Workflow may change.
+
 # Plan
 
 Structured planning workflow using Test-Driven Development. Creates a branch, understands architecture, and produces a plan where tests are written before implementation.
