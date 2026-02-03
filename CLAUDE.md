@@ -23,5 +23,27 @@ The skills are symlinked from `~/.claude/skills/` to this repo, so changes take 
 
 ## Current Skills
 
+- **plan** - TDD-based planning workflow (WIP)
 - **pr-review** - Review GitHub PRs with inline comments
 - **worktree-planner** - Plan and implement changes in isolated git worktrees
+
+## Templates
+
+Reusable configuration templates in `templates/`:
+
+### Hooks (`templates/hooks/`)
+
+Pre-configured Claude Code hooks for quality enforcement:
+
+```bash
+# Copy to your project
+mkdir -p .claude/hooks
+cp templates/hooks/settings.json .claude/
+cp templates/hooks/*.sh .claude/hooks/
+chmod +x .claude/hooks/*.sh
+```
+
+- **precommit.sh** - Blocks `git commit` if checks fail
+- **lint-fix.sh** - Auto-fixes lint after file edits
+
+See `templates/hooks/README.md` for configuration.
