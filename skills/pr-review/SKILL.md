@@ -1,11 +1,11 @@
 ---
 name: pr-review
-description: Review GitHub PRs with a fresh Claude context, leaving inline comments for code quality issues. Use when user asks to review a PR, wants code review feedback, or needs a second opinion on PR changes. Checks for duplicate code, verbose comments, bugs, unclear code, DRY/SOLID violations, missing tests.
+description: Review GitHub PRs with a fresh Claude context and produce severity-ranked findings. Use when user asks to review a PR, wants code review feedback, or needs a second opinion on PR changes. Checks for duplicate code, bugs, unclear code, DRY/SOLID violations, over-engineering, tool/library reuse opportunities, and missing tests.
 ---
 
 # PR Review
 
-Review GitHub PRs using fresh Claude agent contexts, posting inline comments for issues found.
+Review GitHub PRs using fresh Claude agent contexts and report high-signal findings to the user.
 
 **Key benefits:**
 - Reviews run in fresh agent contexts via the Task tool, ensuring no bias from code creation
@@ -24,6 +24,7 @@ Review GitHub PRs using fresh Claude agent contexts, posting inline comments for
 ### P1 - High (should fix) - Agent 2
 - **DRY violations** - Repeated patterns that should be abstracted (bugs waiting to happen)
 - **Missing tests** - New functionality without coverage
+- **Over-engineering / tooling gaps** - Custom implementations where existing libraries, framework features, or project utilities should be used
 - **Performance** - N+1 queries, unbounded operations, memory leaks, blocking in async
 - **Resource leaks** - Unclosed handles, connections, subscriptions
 - **Type safety** - Unsafe casts, any types, missing null checks
@@ -192,6 +193,11 @@ You are looking for issues that make code hard to maintain, extend, or debug.
 - Changed logic without updated tests
 - Edge cases not tested
 
+**Over-Engineering / Reinvented Tooling**
+- Custom utilities that duplicate mature library/framework capabilities
+- New code that ignores project-standard helpers already available in the repo
+- Added complexity that does not improve reliability, performance, or readability
+
 **Performance Issues**
 - N+1 query patterns
 - Unbounded loops or recursion
@@ -235,7 +241,7 @@ You are looking for issues that make code hard to maintain, extend, or debug.
 ## Output
 Write findings to /tmp/pr-review-<PR_NUMBER>/findings-maintainability.json as a JSON array:
 [
-  {"file": "path/to/file.py", "line": 42, "type": "dry|missing-tests|performance|resource-leak|type-safety|validation|clarity|verbose|dead-code", "severity": "warning|suggestion", "comment": "Specific actionable feedback"}
+  {"file": "path/to/file.py", "line": 42, "type": "dry|missing-tests|over-engineering|performance|resource-leak|type-safety|validation|clarity|verbose|dead-code", "severity": "warning|suggestion", "comment": "Specific actionable feedback"}
 ]
 
 Use severity "warning" for P1 issues, "suggestion" for P2 issues.
@@ -245,66 +251,35 @@ Use severity "warning" for P1 issues, "suggestion" for P2 issues.
 - Be specific and actionable
 - Skip minor style issues that linters handle
 - DRY violations are HIGH priority - they cause bugs when one copy is fixed but others aren't
+- Flag over-engineering only when a concrete existing tool/library alternative is available and clearly better
 - If you find nothing, write an empty array []
 ```
 
 ---
 
-### 5. Merge and Post Comments
-
-After BOTH agents complete, merge findings and post as PR comments.
-
-**IMPORTANT:** Do NOT use the GitHub review API (`/pulls/{pr}/reviews`). The PR author cannot review their own PR, and you're likely running as the same user. Use regular PR comments instead.
+### 5. Merge Findings
 
 ```bash
 # Merge findings from both agents
 jq -s 'add' /tmp/pr-review-<PR_NUMBER>/findings-critical.json /tmp/pr-review-<PR_NUMBER>/findings-maintainability.json > /tmp/pr-review-<PR_NUMBER>/findings.json
-
-# Post a summary comment with all findings
-CRITICAL_COUNT=$(cat /tmp/pr-review-<PR_NUMBER>/findings.json | jq '[.[] | select(.severity == "critical")] | length')
-WARNING_COUNT=$(cat /tmp/pr-review-<PR_NUMBER>/findings.json | jq '[.[] | select(.severity == "warning")] | length')
-SUGGESTION_COUNT=$(cat /tmp/pr-review-<PR_NUMBER>/findings.json | jq '[.[] | select(.severity == "suggestion")] | length')
-
-CRITICAL_ITEMS=$(cat /tmp/pr-review-<PR_NUMBER>/findings-critical.json | jq -r '.[] | "- [ ] **\(.file):\(.line)** [\(.type)] \(.comment)"')
-MAINTAINABILITY_ITEMS=$(cat /tmp/pr-review-<PR_NUMBER>/findings-maintainability.json | jq -r '.[] | "- [ ] **\(.file):\(.line)** [\(.type)] \(.comment)"')
-
-gh pr comment <PR_NUMBER> --body "## Code Review Summary
-
-**Issues found:** $CRITICAL_COUNT critical, $WARNING_COUNT warnings, $SUGGESTION_COUNT suggestions
-
-### Critical Issues (P0)
-$CRITICAL_ITEMS
-
-### Maintainability (P1/P2)
-$MAINTAINABILITY_ITEMS
-
----
-*Reviewed by Claude with fresh dual-agent context*"
 ```
-
-Note: Items are formatted as checkboxes (`- [ ]`) so they can be checked off when resolved.
 
 ### 6. Report to User
 
-After posting, report:
+After merging, report:
 - Link to the PR
 - Summary of issues by severity
 - **Highlight any critical issues first** - these block merge
-- List of warnings (DRY violations, missing tests, etc.)
+- List of warnings (DRY violations, missing tests, over-engineering/tooling gaps, etc.)
 
 ---
 
-## Resolving Comments After Fixing Issues
+## Re-review After Fixes
 
-When the user fixes issues from a previous review, update the PR comment to mark items as resolved:
+When the user fixes issues from a previous review:
 
-### 1. Find the Review Comment
-
-```bash
-# Get the review comment ID (look for "Code Review Summary" comments)
-gh api repos/{owner}/{repo}/issues/<PR_NUMBER>/comments \
-  --jq '.[] | select(.body | contains("Code Review Summary")) | {id: .id, created_at: .created_at}'
-```
+### 1. Re-run the review workflow
+Run the same review process against the latest PR head.
 
 ### 2. Check Which Issues Are Fixed
 
@@ -312,19 +287,5 @@ Read the current state of the files and compare against the findings in `/tmp/pr
 - The problematic code has been changed/removed
 - The issue has been addressed
 
-### 3. Update the Comment with Checked Boxes
-
-```bash
-# Update the comment body, changing "- [ ]" to "- [x]" for resolved items
-gh api repos/{owner}/{repo}/issues/comments/<COMMENT_ID> \
-  --method PATCH \
-  -f body="<updated body with [x] for resolved items>"
-```
-
-### 4. When All Items Resolved
-
-When all items are checked off, add a follow-up comment:
-
-```bash
-gh pr comment <PR_NUMBER> --body "All review items have been addressed."
-```
+### 3. Share Delta Summary
+Report each previous finding as resolved, still open, or partially fixed.
