@@ -1,0 +1,4 @@
+interface:
+  display_name: "Codex PR Review"
+  short_description: "Severity-ranked GitHub PR review workflow"
+  default_prompt: "Review this PR, prioritize critical risks, and return actionable findings with file and line references."
