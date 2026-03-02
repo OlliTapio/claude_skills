@@ -3,87 +3,46 @@ name: plan
 description: Plan features, fixes, or chores with TDD approach. Creates a clean branch, assesses change type (feat/fix/chore), analyzes architecture, and produces a plan with tests written first. Use when starting any non-trivial work.
 ---
 
-> **⚠️ WIP / BETA** - This skill is under development and not fully tested. Workflow may change.
-
 # Plan
 
 Structured planning workflow using Test-Driven Development. Creates a branch, understands architecture, and produces a plan where tests are written before implementation.
 
-## Why TDD for LLM Implementation
-
-TDD is ideal for LLM-driven development:
-
-1. **Tests define behavior** - Clear specification before coding
-2. **Immediate verification** - LLM can run tests to validate its work
-3. **Prevents over-engineering** - Write minimal code to pass tests
-4. **Edge cases upfront** - Forces thinking about boundaries early
-5. **Safe refactoring** - Tests catch regressions during changes
-
 ## Workflow
 
-### 1. Assess Change Type
+### 1. Assess change type
 
-| Type | Description | Branch Prefix |
-|------|-------------|---------------|
-| **feat** | New functionality | `feat/` |
-| **fix** | Bug fix | `fix/` |
-| **chore** | Maintenance, deps, config | `chore/` |
-| **refactor** | Restructuring without behavior change | `refactor/` |
+| Type | Branch Prefix |
+|------|---------------|
+| feat | `feat/` |
+| fix | `fix/` |
+| chore | `chore/` |
+| refactor | `refactor/` |
 
-### 2. Check Working Directory is Clean
+### 2. Ensure clean working directory
 
-```bash
-if [ -n "$(git status --porcelain)" ]; then
-  echo "ERROR: Uncommitted changes exist"
-  git status --short
-  exit 1
-fi
-```
+If uncommitted changes exist, ask the user: stash, commit first, or abort.
 
-If not clean, ask user: stash, commit first, or abort.
+### 3. Create branch from latest default branch
 
-### 3. Create Branch from Latest Main
-
-Handles worktree scenarios where main/master is checked out elsewhere:
+Detect the default branch dynamically, then create a feature branch:
 
 ```bash
 git fetch origin
 DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
-BRANCH_NAME="<type>/<short-description>"
-git checkout -b "$BRANCH_NAME" "origin/$DEFAULT_BRANCH"
+git checkout -b "<type>/<short-description>" "origin/$DEFAULT_BRANCH"
 ```
 
 Branch naming: lowercase, hyphen-separated, max 50 chars.
 
-### 4. Enter Plan Mode
+### 4. Enter plan mode
 
-After creating the branch, use the `EnterPlanMode` tool to enter plan mode. This:
+Use the `EnterPlanMode` tool. This enables exploration without making changes and requires user approval before any code is written.
 
-- Enables exploration without making changes
-- Focuses on understanding before implementing
-- Requires user approval before any code is written
-- Prevents premature implementation
+### 5. Analyze architecture (in plan mode)
 
-```
-Use EnterPlanMode tool here
-```
+Read relevant code to understand existing patterns, module structure, conventions, and test patterns. This prevents inconsistent implementations.
 
-Plan mode continues through steps 5-6 (architecture analysis and PLAN.md creation).
-
-### 5. Understand the Architecture (in plan mode)
-
-Read relevant code to understand:
-
-- **Existing patterns** - How similar features are implemented
-- **Module structure** - Where new code should live
-- **Conventions** - Naming, file organization, error handling patterns
-- **Test patterns** - How existing tests are structured
-
-This prevents inconsistent implementations and helps identify the right location for changes.
-
-### 6. Create PLAN.md (in plan mode)
-
-Write a `PLAN.md` file in the repo root:
+### 6. Write PLAN.md (in plan mode)
 
 ```markdown
 # Plan: [Brief Title]
@@ -92,178 +51,48 @@ Write a `PLAN.md` file in the repo root:
 **Branch:** <branch-name>
 
 ## Summary
+[1-2 sentences: what and why]
 
-[1-2 sentences: what will be implemented and why]
+## TDD Phases
 
-## Impact
-
-- [ ] User-facing change
-- [ ] API change (breaking / non-breaking)
-- [ ] Database change (migration needed)
-
-## Architecture
-
-### Patterns to Follow
-- [Existing pattern this should match, e.g., "Service class pattern in src/services/"]
-- [Convention to follow, e.g., "Error handling via Result type"]
-
-### Where This Fits
-- [Module/layer this belongs to]
-- [How it connects to existing code]
-
-### Key Files to Understand
-- `path/to/similar.ts` - [reference implementation]
-- `path/to/types.ts` - [shared types]
-
-## TDD Implementation
-
-### Phase 1: Write Tests (RED)
-
-Write failing tests that define expected behavior:
-
-- [ ] Test: [test case description]
-- [ ] Test: [test case description]
-- [ ] Test: [edge case]
-- [ ] Test: [error case]
+### Phase 1: Tests (RED)
+- [ ] [Test case — expected behavior]
+- [ ] [Edge case]
+- [ ] [Error case]
 
 ### Phase 2: Implement (GREEN)
+- [ ] [Minimal code to pass tests]
 
-Write minimal code to make tests pass:
-
-- [ ] [Implementation task]
-- [ ] [Implementation task]
-
-### Phase 3: Refactor (REFACTOR)
-
-Improve code quality while keeping tests green:
-
-- [ ] [Refactoring task, if known]
+### Phase 3: Refactor
+- [ ] [Cleanup, if known]
 
 ## Files
-
 | File | Action | Purpose |
 |------|--------|---------|
-| `path/to/file.test.ts` | Create | Tests for [feature] |
-| `path/to/file.ts` | Create/Modify | [Implementation] |
-
-## Edge Cases
-
-| Scenario | Expected Behavior |
-|----------|-------------------|
-| [edge case 1] | [behavior] |
-| [error condition] | [error message/handling] |
+| `path/to/file.test.ts` | Create | Tests |
+| `path/to/file.ts` | Create/Modify | Implementation |
 
 ## Open Questions
-
-- [ ] [Question that needs answering]
+- [ ] [Anything unresolved]
 ```
 
-### 7. Exit Plan Mode
+### 7. Exit plan mode
 
-After writing PLAN.md, use `ExitPlanMode` to request user approval. The user will review the plan and either:
+Use `ExitPlanMode` to request user approval. Only proceed after explicit approval.
 
-- **Approve** - Proceed to implementation
-- **Request changes** - Revise the plan
-- **Reject** - Abandon this approach
+### 8. Execute TDD cycle
 
-Only proceed to implementation after explicit approval.
+For each test case in the plan:
+1. Write one failing test, run it to confirm RED
+2. Write minimal code to pass, confirm GREEN
+3. Refactor while keeping tests green
 
-### 8. TDD Execution Flow (after approval)
+Commit at logical points: after test suite, after implementation passes, after significant refactoring.
 
-```
-┌─────────────────────────────────────────────────────┐
-│  1. WRITE TEST                                      │
-│     - Write one failing test                        │
-│     - Run test → confirm it fails (RED)            │
-└─────────────────────┬───────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────┐
-│  2. IMPLEMENT                                       │
-│     - Write minimal code to pass the test          │
-│     - Run test → confirm it passes (GREEN)         │
-└─────────────────────┬───────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────┐
-│  3. REFACTOR                                        │
-│     - Clean up code, remove duplication            │
-│     - Run tests → confirm still passing            │
-└─────────────────────┬───────────────────────────────┘
-                      │
-                      ▼
-              More tests needed?
-                 │         │
-                Yes        No
-                 │         │
-                 ▼         ▼
-            Loop back    Done!
-            to step 1    Commit.
-```
-
-### 9. Commit Strategy
-
-Commit at logical points:
-- After test suite is written (tests failing)
-- After implementation passes tests
-- After refactoring (if significant)
-
-Commit messages follow type prefix: `feat:`, `fix:`, `chore:`, `refactor:`, `test:`
-
-## Parallel Execution (Large Tasks)
-
-For larger tasks, analyze if work can be parallelized.
-
-### When to Parallelize
-
-- Independent components (no shared state)
-- Multiple files with no dependencies
-- Separate concerns (e.g., frontend + backend)
-
-### Parallelization Patterns
-
-| Pattern | Agent 1 | Agent 2 |
-|---------|---------|---------|
-| **Layer split** | Backend/API | Frontend/UI |
-| **Component split** | Module A | Module B |
-| **Test + Impl** | Write all tests | Implement to pass tests |
-
-### Plan Section for Parallel Work
-
-```markdown
-## Parallel Execution
-
-### Agent Assignments
-
-| Agent | Focus | Tasks | Files |
-|-------|-------|-------|-------|
-| Agent 1 | Tests | Write test suite | `*.test.ts` |
-| Agent 2 | Implementation | Make tests pass | `*.ts` |
-
-### Sync Points
-- After Agent 1 completes: Agent 2 starts implementation
-- After both complete: Integration verification
-```
-
-### Execution
-
-Spawn agents in parallel using Task tool (single message, multiple calls):
-
-```
-Agent 1: "Write tests for [feature] as defined in PLAN.md.
-         Commit when test suite is complete (tests will fail)."
-
-Agent 2: "Implement [feature] to pass the tests in PLAN.md.
-         Wait for test files to exist, then implement."
-```
-
-## Quick Plan (Simple Changes)
-
-For single-file fixes or small changes:
+## Quick Plan (simple changes)
 
 ```markdown
 # Plan: [Title]
-
 **Type:** fix | **Branch:** fix/issue-name
 
 ## Summary
@@ -275,6 +104,6 @@ For single-file fixes or small changes:
 3. Verify: [run tests]
 
 ## Files
-- `path/to/file.test.ts` - Add test for [case]
-- `path/to/file.ts` - [fix description]
+- `path/to/file.test.ts` - Add test
+- `path/to/file.ts` - Fix
 ```

@@ -7,92 +7,55 @@ description: Create a pull request with full quality checks. Use when asked to c
 
 Create a pull request with comprehensive quality checks and analysis.
 
-## When to Use
-
-Use this skill when:
-- User asks to create a PR
-- User asks to submit changes for review
-- User asks to prepare code for merging
-- Code is ready to be reviewed and merged
-
 ## Process
 
-Follow these steps in order:
+### Step 1: Merge default branch into current branch
 
-### Step 1: Merge master into current branch
-
-Before analyzing changes, ensure the branch is up to date with master:
+Detect the default branch and merge:
 
 ```bash
-git fetch origin master:master
-git merge master -m "Merge master into $(git branch --show-current)"
+git fetch origin
+DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
+git merge "origin/$DEFAULT_BRANCH" -m "Merge $DEFAULT_BRANCH into $(git branch --show-current)"
 ```
 
-If there are merge conflicts:
-- Stop and inform the user about conflicts
-- Ask the user to resolve conflicts before continuing
-- Do not proceed with the PR creation
+If merge conflicts occur, stop and inform the user. Do not proceed.
 
 ### Step 2: Run quality checks
 
-Run the following checks in parallel using `make check`:
+Discover and run the project's quality checks. Look for:
+- `Makefile` targets (`make check`, `make lint`, `make test`)
+- `package.json` scripts (`npm test`, `npm run lint`)
+- CI config (`.github/workflows/`) to determine what CI runs
+- Language-specific tools (`pytest`, `cargo test`, `go test ./...`)
+
+Run all checks even if some fail, to surface all issues at once. If any fail, show failures and ask user whether to proceed or fix first.
+
+### Step 3: Analyze changes against default branch
 
 ```bash
-make check
+git diff "origin/$DEFAULT_BRANCH"...HEAD --name-only
+git diff "origin/$DEFAULT_BRANCH"...HEAD
+git log "origin/$DEFAULT_BRANCH"..HEAD --oneline
 ```
 
-This runs:
-- `make lint` - Code linting
-- `make fmt` - Code formatting
-- `make mypy` - Type checking
-- `make test` - Unit tests
+Analyze: what changed, async/blocking patterns, potential performance issues, code complexity.
 
-If any checks fail:
-- Show the user the failures
-- Ask if they want to proceed anyway or fix issues first
+### Step 3b: Review against project guidelines
 
-### Step 3: Analyze the changes
+If `docs/review.md` exists, check the diff against every guideline. Fix violations before proceeding; ask the user if a fix is ambiguous.
 
-Compare the current branch with master (NOT with HEAD~1 or recent commits):
+### Step 3c: Verify only relevant changes
 
-```bash
-# Get list of changed files
-git diff master...HEAD --name-only
+Flag unrelated features or significant unrelated work that should be in a separate PR. Small incidental fixes are acceptable.
 
-# Get the full diff for analysis
-git diff master...HEAD
+### Step 4: Commit if needed
 
-# Get commit history since branching from master
-git log master..HEAD --oneline
-```
-
-Analyze:
-- What files changed
-- What functionality was added/modified/removed
-- Any async/await patterns (note if blocking operations are in async functions)
-- Any potential performance issues
-- Code complexity changes
-
-### Step 3b: Review against project code review guidelines
-
-Read `docs/review.md` and check the diff against every guideline listed there. If any violations are found:
-- List each violation with the file path and line number
-- Fix them before proceeding
-- If a fix is ambiguous, ask the user
-
-### Step 3c: Verify PR contains only relevant changes
-
-Review the diff and check that changes relate to the feature/fix being worked on. Small incidental fixes are acceptable. Flag **unrelated features or significant unrelated work** that should be in a separate PR. If found, ask the user whether to keep or split them out.
-
-### Step 4: Create commit (if needed)
-
-If there are uncommitted changes:
+If there are uncommitted changes, stage specific files (not `git add .`) and commit:
 
 ```bash
-git add .
-git commit -m "Brief description of changes
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
+git add <specific-files>
+git commit -m "Brief description
 
 Co-Authored-By: Claude <noreply@anthropic.com>"
 ```
@@ -100,49 +63,25 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 ### Step 5: Push to remote
 
 ```bash
-git push -u origin $(git branch --show-current)
+git push -u origin "$(git branch --show-current)"
 ```
 
-### Step 6: Create PR with comprehensive summary
-
-Create the PR using `gh pr create`. The PR body should include:
-
-**Summary section:**
-- Brief overview of changes (2-3 sentences)
-- Key files modified
-- Any breaking changes
-
-**Changes section:**
-- Bullet list of specific changes
-- Reference file paths with line numbers when relevant
-
-**Technical notes section (if applicable):**
-- Async/blocking analysis findings
-- Performance considerations
-- Architectural decisions
-
-**Test plan:**
-- What was tested
-- What should reviewers test
-
-Use this command:
+### Step 6: Create PR
 
 ```bash
-gh pr create --base master --title "Descriptive PR title" --body "$(cat <<'EOF'
+gh pr create --base "$DEFAULT_BRANCH" --title "Descriptive PR title" --body "$(cat <<'EOF'
 ## Summary
-[Summary here]
+[2-3 sentences, key files, breaking changes]
 
 ## Changes
 - [Change 1]
 - [Change 2]
 
 ## Technical notes
-- [Note 1]
-- [Note 2]
+- [Async/performance/architecture findings, if any]
 
 ## Test plan
-- [Test item 1]
-- [Test item 2]
+- [What was tested, what reviewers should test]
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF
@@ -151,9 +90,7 @@ EOF
 
 ### Step 7: Ask for reviewers
 
-Ask the user: "Who should review this PR?"
-
-Then add reviewers:
+Ask the user who should review, then add them:
 
 ```bash
 gh pr edit --add-reviewer username1,username2
@@ -161,10 +98,6 @@ gh pr edit --add-reviewer username1,username2
 
 ## Important Notes
 
-- **Always compare with master**, not with HEAD or recent commits
-- **Always merge master first** to ensure the branch is up to date
-- Run all checks even if some fail (to show all issues at once)
-- Be concise but thorough in PR descriptions
-- Include technical analysis in PR body
-- Focus on the "why" not just the "what"
-- Reference specific files and line numbers where relevant
+- **Always compare with default branch**, not HEAD or recent commits
+- **Always merge default branch first** to ensure the branch is up to date
+- Be concise but thorough in PR descriptions — focus on "why" not just "what"
