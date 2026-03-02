@@ -1,54 +1,32 @@
 ---
 name: plan
-description: Plan features, fixes, or chores with TDD approach. Creates a clean branch, assesses change type (feat/fix/chore), analyzes architecture, and produces a plan with tests written first. Use when starting any non-trivial work.
+description: Plan features, fixes, or chores with TDD approach. Assesses change type (feat/fix/chore), analyzes architecture, and produces a plan with tests written first. Use when starting any non-trivial work.
 ---
 
 # Plan
 
-Structured planning workflow using Test-Driven Development. Creates a branch, understands architecture, and produces a plan where tests are written before implementation.
+Structured planning workflow using Test-Driven Development. Understands architecture and produces a plan where tests are written before implementation.
 
 ## Workflow
 
 ### 1. Assess change type
 
-| Type | Branch Prefix |
-|------|---------------|
-| feat | `feat/` |
-| fix | `fix/` |
-| chore | `chore/` |
-| refactor | `refactor/` |
+Categorize as: **feat**, **fix**, **chore**, or **refactor**.
 
-### 2. Ensure clean working directory
-
-If uncommitted changes exist, ask the user: stash, commit first, or abort.
-
-### 3. Create branch from latest default branch
-
-Detect the default branch dynamically, then create a feature branch:
-
-```bash
-git fetch origin
-DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
-git checkout -b "<type>/<short-description>" "origin/$DEFAULT_BRANCH"
-```
-
-Branch naming: lowercase, hyphen-separated, max 50 chars.
-
-### 4. Enter plan mode
+### 2. Enter plan mode
 
 Use the `EnterPlanMode` tool. This enables exploration without making changes and requires user approval before any code is written.
 
-### 5. Analyze architecture (in plan mode)
+### 3. Analyze architecture (in plan mode)
 
 Read relevant code to understand existing patterns, module structure, conventions, and test patterns. This prevents inconsistent implementations.
 
-### 6. Write PLAN.md (in plan mode)
+### 4. Write PLAN.md (in plan mode)
 
 ```markdown
 # Plan: [Brief Title]
 
 **Type:** feat | fix | chore | refactor
-**Branch:** <branch-name>
 
 ## Summary
 [1-2 sentences: what and why]
@@ -76,11 +54,11 @@ Read relevant code to understand existing patterns, module structure, convention
 - [ ] [Anything unresolved]
 ```
 
-### 7. Exit plan mode
+### 5. Exit plan mode
 
 Use `ExitPlanMode` to request user approval. Only proceed after explicit approval.
 
-### 8. Execute TDD cycle
+### 6. Execute TDD cycle
 
 For each test case in the plan:
 1. Write one failing test, run it to confirm RED
@@ -93,7 +71,7 @@ Commit at logical points: after test suite, after implementation passes, after s
 
 ```markdown
 # Plan: [Title]
-**Type:** fix | **Branch:** fix/issue-name
+**Type:** fix
 
 ## Summary
 [What and why]
