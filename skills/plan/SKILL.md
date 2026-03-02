@@ -1,27 +1,15 @@
 ---
 name: plan
-description: Plan features, fixes, or chores with TDD approach. Assesses change type (feat/fix/chore), analyzes architecture, and produces a plan with tests written first. Use when starting any non-trivial work.
+description: Plan features, fixes, or chores with TDD approach. Use when starting any non-trivial work. Extends Claude's built-in planning with test-driven structure.
 ---
 
 # Plan
 
-Structured planning workflow using Test-Driven Development. Understands architecture and produces a plan where tests are written before implementation.
+Use Claude's built-in `EnterPlanMode` to explore the codebase and design an approach — but structure the plan around TDD: tests define the spec before any implementation.
 
-## Workflow
+## TDD nuance
 
-### 1. Assess change type
-
-Categorize as: **feat**, **fix**, **chore**, or **refactor**.
-
-### 2. Enter plan mode
-
-Use the `EnterPlanMode` tool. This enables exploration without making changes and requires user approval before any code is written.
-
-### 3. Analyze architecture (in plan mode)
-
-Read relevant code to understand existing patterns, module structure, conventions, and test patterns. This prevents inconsistent implementations.
-
-### 4. Write PLAN.md (in plan mode)
+When writing the plan (PLAN.md), organize implementation as TDD phases:
 
 ```markdown
 # Plan: [Brief Title]
@@ -54,34 +42,12 @@ Read relevant code to understand existing patterns, module structure, convention
 - [ ] [Anything unresolved]
 ```
 
-### 5. Exit plan mode
+## Execution
 
-Use `ExitPlanMode` to request user approval. Only proceed after explicit approval.
-
-### 6. Execute TDD cycle
-
-For each test case in the plan:
+After plan approval, follow the TDD cycle strictly:
 1. Write one failing test, run it to confirm RED
 2. Write minimal code to pass, confirm GREEN
 3. Refactor while keeping tests green
+4. Repeat for each test case in the plan
 
-Commit at logical points: after test suite, after implementation passes, after significant refactoring.
-
-## Quick Plan (simple changes)
-
-```markdown
-# Plan: [Title]
-**Type:** fix
-
-## Summary
-[What and why]
-
-## TDD
-1. Test: [what to test]
-2. Fix: [what to change]
-3. Verify: [run tests]
-
-## Files
-- `path/to/file.test.ts` - Add test
-- `path/to/file.ts` - Fix
-```
+Commit at logical points: after test suite, after passing implementation, after significant refactoring.
