@@ -55,9 +55,7 @@ If there are uncommitted changes, stage specific files (not `git add .`) and com
 
 ```bash
 git add <specific-files>
-git commit -m "Brief description
-
-Co-Authored-By: Claude <noreply@anthropic.com>"
+git commit -m "Brief description"
 ```
 
 ### Step 5: Push to remote
@@ -82,8 +80,6 @@ gh pr create --base "$DEFAULT_BRANCH" --title "Descriptive PR title" --body "$(c
 
 ## Test plan
 - [What was tested, what reviewers should test]
-
-🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF
 )"
 ```
