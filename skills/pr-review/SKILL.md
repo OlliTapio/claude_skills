@@ -75,14 +75,14 @@ Write findings to `$OUT/findings-maintainability.json`.
 - Only flag issues that are likely true defects or meaningful risks
 - Skip linter-only style nits unless they hide correctness risk
 - Include a confidence estimate (high/medium/low) and mark assumptions explicitly
-- If project guidelines exist at `$OUT/project_guidelines.md`, apply them
+- If project guidelines exist at `$OUT/project_guidelines.md`, check every rule. Violations are P0 — these guidelines exist for a reason and must be followed
 - If no issues found, write an empty array `[]`
 
 #### Severity mapping
 
 | Level | Label | Scope |
 |-------|-------|-------|
-| P0 | `critical` | Security, data-loss/corruption, breaking production behavior |
+| P0 | `critical` | Security, data-loss/corruption, breaking production behavior, project guideline violations (`docs/review.md`) |
 | P1 | `warning` | Correctness risk, missing tests for changed behavior, major DRY/perf/type issues |
 | P2 | `suggestion` | Clarity and simplification improvements, non-blocking |
 
