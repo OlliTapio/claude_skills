@@ -5,287 +5,116 @@ description: Review GitHub PRs with a fresh Claude context and produce severity-
 
 # PR Review
 
-Review GitHub PRs using fresh Claude agent contexts and report high-signal findings to the user.
-
-**Key benefits:**
-- Reviews run in fresh agent contexts via the Task tool, ensuring no bias from code creation
-- Two specialized agents run in parallel: one for critical/security issues, one for maintainability
-
-## Review Criteria (by priority)
-
-### P0 - Critical (block merge) - Agent 1
-- **Security** - Injection, auth bypass, secrets in code, OWASP top 10
-- **Breaking changes** - API contract changes, removed exports, changed signatures
-- **Data loss risks** - Destructive operations without safeguards
-- **Race conditions** - Concurrency bugs, async issues, shared state mutations
-- **Bugs** - Logic errors, null handling, edge cases
-- **Error handling** - Swallowed errors, missing try/catch, silent failures
-
-### P1 - High (should fix) - Agent 2
-- **DRY violations** - Repeated patterns that should be abstracted (bugs waiting to happen)
-- **Missing tests** - New functionality without coverage
-- **Over-engineering / tooling gaps** - Custom implementations where existing libraries, framework features, or project utilities should be used
-- **Performance** - N+1 queries, unbounded operations, memory leaks, blocking in async
-- **Resource leaks** - Unclosed handles, connections, subscriptions
-- **Type safety** - Unsafe casts, any types, missing null checks
-- **Input validation** - Boundary conditions, malformed input handling
-
-### P2 - Suggestions - Agent 2
-- **Code clarity** - Unclear naming, complex logic without comments
-- **Verbose code** - Can be simplified
-- **Dead code** - Unreachable code, unused imports/variables
+Review pull requests with a repeatable workflow that prioritizes real defects over style noise.
 
 ## Workflow
 
-### 1. Determine PR Number
+### 1. Identify the PR
 
-If the user provides a PR number or URL, extract it. Otherwise, check if we're on a branch with an open PR:
-
-```bash
-gh pr view --json number -q '.number' 2>/dev/null || echo "No PR found for current branch"
-```
-
-### 2. Get PR Context
+If the user provides a PR number or URL, use it directly. Otherwise, detect from current branch:
 
 ```bash
-# Create temp directory for this review
-mkdir -p /tmp/pr-review-<PR_NUMBER>
-
-# Get list of changed files
-gh pr view <PR_NUMBER> --json files -q '.files[].path' > /tmp/pr-review-<PR_NUMBER>/files.txt
-
-# Get the diff
-gh pr diff <PR_NUMBER> > /tmp/pr-review-<PR_NUMBER>/diff.patch
-
-# Get PR info
-gh pr view <PR_NUMBER> --json title,body,baseRefName,headRefName > /tmp/pr-review-<PR_NUMBER>/pr_info.json
+gh pr view --json number,url,title -q '{number: .number, url: .url, title: .title}' 2>/dev/null || echo "No PR found for current branch"
 ```
 
-### 3. Check for Project-Specific Guidelines
+### 2. Gather PR context
 
 ```bash
-if [ -f docs/review.md ]; then
-  cat docs/review.md > /tmp/pr-review-<PR_NUMBER>/project_guidelines.md
-fi
+PR=<PR_NUMBER>
+OUT="/tmp/pr-review-$PR"
+mkdir -p "$OUT"
+
+gh pr view "$PR" --json title,body,baseRefName,headRefName,files > "$OUT/pr_info.json"
+gh pr diff "$PR" > "$OUT/diff.patch"
+
+# Project-specific review rules (if available)
+[ -f docs/review.md ] && cp docs/review.md "$OUT/project_guidelines.md"
 ```
 
-### 4. Spawn Two Review Agents IN PARALLEL
+### 3. Read changed files fully
 
-**CRITICAL:** Use the Task tool to spawn TWO fresh agents for the review. Run them in parallel by making both Task calls in a single message. This ensures:
-- Review context is completely separate from code creation context
-- Critical issues are prioritized separately from maintainability concerns
-- Faster reviews by parallelizing the work
+Use the file list from `pr_info.json`, then read each changed file in full (not only diff hunks). Full-file context reduces false positives and catches copy-paste regressions.
 
-```
-Two Task tool calls in the SAME message:
+### 4. Run two review passes
 
-Agent 1 (Critical):
-- subagent_type: "general-purpose"
-- description: "Review PR <PR_NUMBER> - critical issues"
-- allowed_tools: ["Read", "Write(/tmp/pr-review-*/*)", "Glob", "Grep"]
+Spawn two agents in parallel via the Agent tool (both calls in a single message). Fresh contexts ensure no bias from prior conversation.
 
-Agent 2 (Maintainability):
-- subagent_type: "general-purpose"
-- description: "Review PR <PR_NUMBER> - maintainability"
-- allowed_tools: ["Read", "Write(/tmp/pr-review-*/*)", "Glob", "Grep"]
-```
+If subagents are not available, run the same two-pass flow sequentially in the main agent.
 
-The `allowed_tools` parameter pre-authorizes file access so the agents can work without permission prompts.
+#### Agent 1 — Critical issues (P0)
 
----
+Check for:
+- Security vulnerabilities (SQL/NoSQL injection, command injection, XSS, SSRF, auth bypass, secrets, path traversal)
+- Breaking changes (API contracts, removed exports, signature changes, response shape changes)
+- Data loss or corruption risk (unsafe deletes, missing safeguards, missing transactions)
+- Race conditions and async correctness (shared mutable state, missing await, ordering bugs)
+- Logic bugs and edge-case failures (off-by-one, null handling, inverted conditions)
+- Error-handling failures (silent catch blocks, dropped errors, leaked internals in user errors)
 
-**Agent 1 Prompt (Critical Issues):**
+Treat these as merge-blocking unless proven safe by explicit evidence.
 
-```
-You are a security-focused code reviewer for PR #<PR_NUMBER>. You have FRESH context with no prior knowledge.
+Write findings to `$OUT/findings-critical.json`.
 
-## Your Focus: Critical Issues Only
-You are looking for issues that could cause production incidents, security vulnerabilities, or data loss.
+#### Agent 2 — Maintainability (P1/P2)
 
-## Setup
-1. Read /tmp/pr-review-<PR_NUMBER>/pr_info.json for PR context
-2. Read /tmp/pr-review-<PR_NUMBER>/files.txt for changed file list
-3. Read /tmp/pr-review-<PR_NUMBER>/diff.patch for the diff
-4. If /tmp/pr-review-<PR_NUMBER>/project_guidelines.md exists, read and follow those guidelines
-5. Read EACH changed file IN FULL to understand context
+Check for:
+- Missing or insufficient tests for behavior changes
+- DRY violations and duplicated logic likely to drift
+- Over-engineering or reinvented solutions where existing libraries, framework features, or project utilities should be used
+- Performance and resource leak risks (N+1, unbounded loops, leaked handles/listeners)
+- Type-safety and input-validation gaps
+- Clarity problems that hide defects
+- Dead code or unnecessary complexity
 
-## What to Look For (P0 - Critical)
+Write findings to `$OUT/findings-maintainability.json`.
 
-### Security
-- SQL/NoSQL injection, command injection, XSS, SSRF
-- Authentication/authorization bypass
-- Secrets, API keys, passwords in code
-- Insecure deserialization
-- Path traversal vulnerabilities
+#### Agent guidelines (include in both prompts)
 
-### Breaking Changes
-- Changed function signatures that break callers
-- Removed or renamed exports
-- Changed API response formats
-- Database schema changes without migration
+- Read ENTIRE changed files, not just diff hunks
+- Be specific and actionable — include file path, line number, concrete fix direction
+- Only flag issues that are likely true defects or meaningful risks
+- Skip linter-only style nits unless they hide correctness risk
+- Include a confidence estimate (high/medium/low) and mark assumptions explicitly
+- If project guidelines exist at `$OUT/project_guidelines.md`, check every rule. Violations are P0 — these guidelines exist for a reason and must be followed
+- If no issues found, write an empty array `[]`
 
-### Data Loss / Corruption
-- Destructive operations (DELETE, DROP, truncate) without safeguards
-- Missing transactions where needed
-- Race conditions that could corrupt data
+#### Severity mapping
 
-### Concurrency Issues
-- Race conditions in async code
-- Shared mutable state without synchronization
-- Deadlock potential
-- Missing await on async calls
+| Level | Label | Scope |
+|-------|-------|-------|
+| P0 | `critical` | Security, data-loss/corruption, breaking production behavior, project guideline violations (`docs/review.md`) |
+| P1 | `warning` | Correctness risk, missing tests for changed behavior, major DRY/perf/type issues |
+| P2 | `suggestion` | Clarity and simplification improvements, non-blocking |
 
-### Bugs
-- Logic errors (wrong operators, off-by-one, inverted conditions)
-- Null/undefined not handled
-- Edge cases not covered
-- Infinite loops potential
+#### Finding format
 
-### Error Handling
-- Exceptions swallowed silently (empty catch blocks)
-- Errors not propagated correctly
-- Missing error handling on I/O operations
-- User-facing errors leaking internal details
-
-## Output
-Write findings to /tmp/pr-review-<PR_NUMBER>/findings-critical.json as a JSON array:
-[
-  {"file": "path/to/file.py", "line": 42, "type": "security|breaking|data-loss|race-condition|bug|error-handling", "severity": "critical", "comment": "Specific actionable feedback"}
-]
-
-## Guidelines
-- Read ENTIRE files, not just changed lines
-- Be specific and actionable
-- Only flag REAL issues - false positives waste reviewer time
-- Every issue you flag should be something that could cause a production incident
-- If you find nothing critical, write an empty array []
+```json
+[{"file": "path/to/file.py", "line": 42, "category": "security|breaking|bug|race-condition|missing-tests|dry|over-engineering|performance|type-safety", "severity": "critical|warning|suggestion", "comment": "Specific actionable feedback", "confidence": "high|medium|low"}]
 ```
 
----
-
-**Agent 2 Prompt (Maintainability):**
-
-```
-You are a maintainability-focused code reviewer for PR #<PR_NUMBER>. You have FRESH context with no prior knowledge.
-
-## Your Focus: Code Quality & Maintainability
-You are looking for issues that make code hard to maintain, extend, or debug.
-
-## Setup
-1. Read /tmp/pr-review-<PR_NUMBER>/pr_info.json for PR context
-2. Read /tmp/pr-review-<PR_NUMBER>/files.txt for changed file list
-3. Read /tmp/pr-review-<PR_NUMBER>/diff.patch for the diff
-4. If /tmp/pr-review-<PR_NUMBER>/project_guidelines.md exists, read and follow those guidelines
-5. Read EACH changed file IN FULL to understand context
-
-## What to Look For
-
-### P1 - High Priority (should fix)
-
-**DRY Violations (High Priority - bugs waiting to happen)**
-- Same logic copy-pasted in multiple places
-- Similar code patterns that should be abstracted
-- Duplicated constants or magic values
-- When one copy gets fixed, others become bugs
-
-**Missing Tests**
-- New functions/classes without test coverage
-- Changed logic without updated tests
-- Edge cases not tested
-
-**Over-Engineering / Reinvented Tooling**
-- Custom utilities that duplicate mature library/framework capabilities
-- New code that ignores project-standard helpers already available in the repo
-- Added complexity that does not improve reliability, performance, or readability
-
-**Performance Issues**
-- N+1 query patterns
-- Unbounded loops or recursion
-- Memory leaks (event listeners not cleaned up, growing caches)
-- Blocking operations in async code
-- Unnecessary re-renders or recomputation
-
-**Resource Leaks**
-- File handles not closed
-- Database connections not released
-- Event subscriptions not unsubscribed
-- Timers/intervals not cleared
-
-**Type Safety**
-- Unsafe type casts or assertions
-- Use of `any` type
-- Missing null/undefined checks where needed
-
-**Input Validation**
-- Missing boundary checks
-- Malformed input not handled
-- Assumptions about input format not validated
-
-### P2 - Suggestions
-
-**Code Clarity**
-- Unclear variable/function names
-- Complex logic that needs a comment
-- Deeply nested conditionals
-
-**Verbose Code**
-- Code that could be simplified
-- Unnecessary intermediate variables
-- Overly defensive code
-
-**Dead Code**
-- Unreachable code paths
-- Unused variables or imports
-- Commented-out code
-
-## Output
-Write findings to /tmp/pr-review-<PR_NUMBER>/findings-maintainability.json as a JSON array:
-[
-  {"file": "path/to/file.py", "line": 42, "type": "dry|missing-tests|over-engineering|performance|resource-leak|type-safety|validation|clarity|verbose|dead-code", "severity": "warning|suggestion", "comment": "Specific actionable feedback"}
-]
-
-Use severity "warning" for P1 issues, "suggestion" for P2 issues.
-
-## Guidelines
-- Read ENTIRE files, not just changed lines - new code might duplicate existing patterns
-- Be specific and actionable
-- Skip minor style issues that linters handle
-- DRY violations are HIGH priority - they cause bugs when one copy is fixed but others aren't
-- Flag over-engineering only when a concrete existing tool/library alternative is available and clearly better
-- If you find nothing, write an empty array []
-```
-
----
-
-### 5. Merge Findings
+### 5. Merge and report
 
 ```bash
-# Merge findings from both agents
-jq -s 'add' /tmp/pr-review-<PR_NUMBER>/findings-critical.json /tmp/pr-review-<PR_NUMBER>/findings-maintainability.json > /tmp/pr-review-<PR_NUMBER>/findings.json
+jq -s 'add' "$OUT/findings-critical.json" "$OUT/findings-maintainability.json" > "$OUT/findings.json"
 ```
 
-### 6. Report to User
+Report to user:
+- PR link
+- Findings sorted by severity (P0 first)
+- Summary count by severity
+- If no issues, state explicitly and note residual risk (e.g., missing integration tests)
 
-After merging, report:
-- Link to the PR
-- Summary of issues by severity
-- **Highlight any critical issues first** - these block merge
-- List of warnings (DRY violations, missing tests, over-engineering/tooling gaps, etc.)
+### 6. Re-review after fixes
 
----
+When the user says fixes are done:
 
-## Re-review After Fixes
+1. Re-run the workflow on latest PR head.
+2. Check each previously reported issue against current file state.
+3. Mark each as resolved, still open, or partially fixed.
+4. Share a concise delta summary.
 
-When the user fixes issues from a previous review:
+## Quality bar
 
-### 1. Re-run the review workflow
-Run the same review process against the latest PR head.
-
-### 2. Check Which Issues Are Fixed
-
-Read the current state of the files and compare against the findings in `/tmp/pr-review-<PR_NUMBER>/findings.json`. For each finding, check if:
-- The problematic code has been changed/removed
-- The issue has been addressed
-
-### 3. Share Delta Summary
-Report each previous finding as resolved, still open, or partially fixed.
+- Favor precision over volume.
+- Only report issues that are likely true defects or meaningful risks.
+- Always prioritize merge-blocking concerns before suggestions.

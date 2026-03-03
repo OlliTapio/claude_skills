@@ -82,6 +82,7 @@ Check for:
 - Race conditions and async correctness (shared mutable state, missing await, ordering bugs)
 - Logic bugs and edge-case failures (off-by-one, null handling, inverted conditions)
 - Error-handling failures (silent catch blocks, dropped errors, leaked internals in user errors)
+- Project guideline violations — if `$OUT/project_guidelines.md` exists, check every rule. These guidelines exist for a reason and must be followed
 
 Treat these as merge-blocking unless proven safe by explicit evidence.
 
@@ -99,7 +100,7 @@ Check for:
 
 #### Severity mapping
 
-- P0 `critical`: security, data-loss/corruption, breaking production behavior.
+- P0 `critical`: security, data-loss/corruption, breaking production behavior, project guideline violations (`docs/review.md`).
 - P1 `warning`: high-risk correctness, missing tests for changed behavior, major DRY/perf/type issues.
 - P2 `suggestion`: clarity and simplification improvements that are non-blocking.
 

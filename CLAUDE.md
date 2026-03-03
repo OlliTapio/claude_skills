@@ -23,10 +23,11 @@ The skills are symlinked from `~/.claude/skills/` to this repo, so changes take 
 
 ## Current Skills
 
-- **plan** - TDD-based planning workflow (WIP)
+- **plan** - TDD-based planning workflow
 - **pr** - Create PRs with quality checks, review guideline validation, and relevance check
-- **pr-review** - Review GitHub PRs with inline comments
-- **worktree-planner** - Plan and implement changes in isolated git worktrees
+- **pr-review** - Review GitHub PRs with severity-ranked findings
+- **codex-pr-review** - PR review optimized for Codex runtime
+- **frontend-design** - Distinctive, production-grade frontend interfaces
 
 ## Templates
 
