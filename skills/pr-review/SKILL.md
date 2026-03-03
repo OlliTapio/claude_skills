@@ -43,15 +43,28 @@ If subagents are not available, run the same two-pass flow sequentially in the m
 
 #### Agent 1 — Critical issues (P0)
 
-Prompt focus: security vulnerabilities, breaking changes, data loss/corruption risk, race conditions and async correctness, logic bugs and edge-case failures, error-handling failures.
+Check for:
+- Security vulnerabilities (SQL/NoSQL injection, command injection, XSS, SSRF, auth bypass, secrets, path traversal)
+- Breaking changes (API contracts, removed exports, signature changes, response shape changes)
+- Data loss or corruption risk (unsafe deletes, missing safeguards, missing transactions)
+- Race conditions and async correctness (shared mutable state, missing await, ordering bugs)
+- Logic bugs and edge-case failures (off-by-one, null handling, inverted conditions)
+- Error-handling failures (silent catch blocks, dropped errors, leaked internals in user errors)
 
-Treat these as merge-blocking unless proven safe by explicit evidence. Do not claim runtime behavior without test evidence or clear static proof.
+Treat these as merge-blocking unless proven safe by explicit evidence.
 
 Write findings to `$OUT/findings-critical.json`.
 
 #### Agent 2 — Maintainability (P1/P2)
 
-Prompt focus: missing or insufficient tests for behavior changes, DRY violations likely to drift, over-engineering or reinvented solutions where existing tools should be used, performance and resource leak risks, type-safety and input-validation gaps, dead code or unnecessary complexity.
+Check for:
+- Missing or insufficient tests for behavior changes
+- DRY violations and duplicated logic likely to drift
+- Over-engineering or reinvented solutions where existing libraries, framework features, or project utilities should be used
+- Performance and resource leak risks (N+1, unbounded loops, leaked handles/listeners)
+- Type-safety and input-validation gaps
+- Clarity problems that hide defects
+- Dead code or unnecessary complexity
 
 Write findings to `$OUT/findings-maintainability.json`.
 
