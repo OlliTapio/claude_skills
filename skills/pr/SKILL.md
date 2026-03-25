@@ -43,7 +43,7 @@ Analyze: what changed, async/blocking patterns, potential performance issues, co
 
 ### Step 3b: Review against project guidelines
 
-If `docs/review.md` exists, check the diff against every guideline. Fix violations before proceeding; ask the user if a fix is ambiguous.
+Check the diff against every guideline in `.claude/rules/` and `docs/review.md` (if they exist). Fix violations before proceeding; ask the user if a fix is ambiguous.
 
 ### Step 3c: Verify only relevant changes
 
