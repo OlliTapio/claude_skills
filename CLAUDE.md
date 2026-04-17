@@ -27,6 +27,7 @@ The skills are symlinked from `~/.claude/skills/` to this repo, so changes take 
 - **pr** - Create PRs with quality checks, review guideline validation, and relevance check
 - **pr-review** - Review GitHub PRs with severity-ranked findings
 - **codex-pr-review** - PR review optimized for Codex runtime
+- **finalize** - Create PR, review, fix issues, squash merge end-to-end
 - **frontend-design** - Distinctive, production-grade frontend interfaces
 
 ## Templates
