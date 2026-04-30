@@ -59,7 +59,10 @@ Write findings to `$OUT/findings-critical.json`.
 
 Check for:
 - Missing or insufficient tests for behavior changes
-- DRY violations and duplicated logic likely to drift
+- DRY violations and duplicated logic likely to drift. In particular:
+  - Trace each rendered/derived value to one source; flag if a metric has multiple producers.
+  - Same rule expressed in two syntaxes (e.g., app-layer classifier mirroring a SQL `CASE`) counts as duplication — push to the lowest shared layer.
+  - If two paths must coexist, require a parity test with fixtures covering nulls and edge values.
 - Over-engineering or reinvented solutions where existing libraries, framework features, or project utilities should be used
 - Performance and resource leak risks (N+1, unbounded loops, leaked handles/listeners)
 - Type-safety and input-validation gaps
