@@ -4,7 +4,7 @@ Personal Claude Code skills for OlliTapio.
 
 ## Writing Skills
 
-**Less is more.** A skill is a trigger + the minimum guidance needed to act. Cut anti-pattern lists, anecdotes, multi-step output templates, and restated rationale. If a sentence doesn't change what the model does, delete it. Aim for a one-screen SKILL.md.
+See `.claude/rules/skill-authoring.md` (auto-loads when editing `skills/**/SKILL.md`).
 
 ## Updating Skills
 
