@@ -5,8 +5,6 @@ description: Build an analytics view (dashboard page, KPI tile, report) where th
 
 # analytics-view
 
-Analytics surfaces fail when the same metric is computed twice and the numbers drift. Prevent it structurally.
-
 ## Rules
 
 1. **One definition, upstream.** Define each metric once at the data layer — view, function, dbt model, or shared service. Downstream code reads it; never re-derives it.

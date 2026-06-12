@@ -16,7 +16,3 @@ Anthropic: *"Keep the body itself concise. Once a skill loads, its content stays
 - State **what to do**, not why it matters or what could go wrong in theory.
 - Cut anti-pattern lists, anecdotes, restated rationale, and multi-step output templates unless the model needs them to act correctly.
 - If a sentence doesn't change what the model does, delete it.
-
-## Test before committing
-
-Re-read the skill and ask: which sentences would change the next action I take? Remove the rest.
