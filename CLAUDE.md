@@ -2,6 +2,10 @@
 
 Personal Claude Code skills for OlliTapio.
 
+## Writing Skills
+
+**Less is more.** A skill is a trigger + the minimum guidance needed to act. Cut anti-pattern lists, anecdotes, multi-step output templates, and restated rationale. If a sentence doesn't change what the model does, delete it. Aim for a one-screen SKILL.md.
+
 ## Updating Skills
 
 When modifying skills in this repo:
@@ -30,6 +34,7 @@ The skills are symlinked from `~/.claude/skills/` to this repo, so changes take 
 - **finalize** - Create PR, review, fix issues, squash merge end-to-end
 - **test-on-main** - Exit worktree, checkout branch on main, merge main, run tests
 - **frontend-design** - Distinctive, production-grade frontend interfaces
+- **analytics-view** - Build analytics surfaces with single-source-of-truth metrics and cross-surface parity tests
 
 ## Templates
 
