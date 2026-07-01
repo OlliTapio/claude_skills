@@ -64,6 +64,7 @@ Check for:
   - Same rule expressed in two syntaxes (e.g., app-layer classifier mirroring a SQL `CASE`) counts as duplication — push to the lowest shared layer.
   - If two paths must coexist, require a parity test with fixtures covering nulls and edge values.
 - Over-engineering or reinvented solutions where existing libraries, framework features, or project utilities should be used
+- Redundant migrations — flag several migration files that could be one, or one feature's migrations split across PRs. (Exception: don't edit a migration already applied to prod.)
 - Performance and resource leak risks (N+1, unbounded loops, leaked handles/listeners)
 - Type-safety and input-validation gaps
 - Clarity problems that hide defects
