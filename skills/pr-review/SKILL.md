@@ -5,121 +5,46 @@ description: Review GitHub PRs with a fresh Claude context and produce severity-
 
 # PR Review
 
-Review pull requests with a repeatable workflow that prioritizes real defects over style noise.
+Prioritize real defects over style noise. Favor precision over volume — only flag likely defects or meaningful risks.
 
-## Workflow
+## 1. Get the PR and guidelines
 
-### 1. Identify the PR
+Use the PR number/URL if given; else `gh pr view` on the current branch. Fetch the diff and changed-file list. Read `.claude/rules/` and `docs/review.md` if present — **paste their content into both agent prompts** so each bot enforces the rules on its own beat. A guideline violation is always P0.
 
-If the user provides a PR number or URL, use it directly. Otherwise, detect from current branch:
+## 2. Two focused reviews
 
-```bash
-gh pr view --json number,url,title -q '{number: .number, url: .url, title: .title}' 2>/dev/null || echo "No PR found for current branch"
-```
+Spawn **two Agents in parallel** (single message), each with a fresh context and **only its own brief** — never both. Fall back to sequential if Agents are unavailable.
 
-### 2. Gather PR context
+**Agent 1 — Security & breaking changes:**
+- Security: injection, XSS, SSRF, auth bypass, secrets, path traversal
+- Breaking changes: API contracts, removed exports, signature/response-shape changes
+- Data loss: unsafe deletes, missing transactions/safeguards
+- Async correctness: races, missing `await`, shared mutable state
+- Logic bugs: off-by-one, null handling, inverted conditions
+- Error handling: silent catches, dropped errors, internals leaked to users
+- Any pasted guideline touching the above
 
-```bash
-PR=<PR_NUMBER>
-OUT="/tmp/pr-review-$PR"
-mkdir -p "$OUT"
+**Agent 2 — Code quality:**
+- Missing tests for changed behavior
+- DRY: trace each derived value to one source; a rule in two syntaxes (e.g. app classifier mirroring SQL `CASE`) is duplication — push to the lowest shared layer. If two paths must coexist, require a parity test covering nulls/edge values.
+- Over-engineering or reinvented wheels where a library/framework/project util exists
+- Redundant migrations — several files that could be one, or one feature split across PRs (don't edit a migration already applied to prod)
+- Performance/leaks: N+1, unbounded loops, leaked handles/listeners
+- Type-safety and input-validation gaps; clarity that hides defects; dead code
+- Any pasted guideline touching the above
 
-gh pr view "$PR" --json title,body,baseRefName,headRefName,files > "$OUT/pr_info.json"
-gh pr diff "$PR" > "$OUT/diff.patch"
+**Both bots:** read entire changed files, not just hunks. Return each finding as file + line + concrete fix + confidence (high/med/low); mark assumptions. Skip style nits unless they hide correctness risk. Assign severity per finding by impact (§3) — a bot's beat decides *what* it hunts, not how severe each hit is; either bot can report any severity.
 
-# Project-specific review rules (if available)
-[ -f docs/review.md ] && cp docs/review.md "$OUT/project_guidelines.md"
-```
+## 3. Severity (per finding, by impact)
 
-### 3. Read changed files fully
+- **P0 critical** — exploitable/data-losing/prod-breaking now, or any `.claude/rules`/`docs/review.md` violation
+- **P1 warning** — real risk needing a trigger or specific state: correctness bugs, exploitable-only-under-conditions security gaps, missing tests for changed behavior, major DRY/perf/type issues
+- **P2 suggestion** — hardening and clarity with no direct failure path: defense-in-depth, simplification, non-blocking nits
 
-Use the file list from `pr_info.json`, then read each changed file in full (not only diff hunks). Full-file context reduces false positives and catches copy-paste regressions.
+## 4. Report
 
-### 4. Run two review passes
+Present findings to the user sorted P0→P2, with a count per severity. If none, say so and name residual risk (e.g. missing integration tests).
 
-Spawn two agents in parallel via the Agent tool (both calls in a single message). Fresh contexts ensure no bias from prior conversation.
+## 5. Re-review
 
-If subagents are not available, run the same two-pass flow sequentially in the main agent.
-
-#### Agent 1 — Critical issues (P0)
-
-Check for:
-- Security vulnerabilities (SQL/NoSQL injection, command injection, XSS, SSRF, auth bypass, secrets, path traversal)
-- Breaking changes (API contracts, removed exports, signature changes, response shape changes)
-- Data loss or corruption risk (unsafe deletes, missing safeguards, missing transactions)
-- Race conditions and async correctness (shared mutable state, missing await, ordering bugs)
-- Logic bugs and edge-case failures (off-by-one, null handling, inverted conditions)
-- Error-handling failures (silent catch blocks, dropped errors, leaked internals in user errors)
-
-Treat these as merge-blocking unless proven safe by explicit evidence.
-
-Write findings to `$OUT/findings-critical.json`.
-
-#### Agent 2 — Maintainability (P1/P2)
-
-Check for:
-- Missing or insufficient tests for behavior changes
-- DRY violations and duplicated logic likely to drift. In particular:
-  - Trace each rendered/derived value to one source; flag if a metric has multiple producers.
-  - Same rule expressed in two syntaxes (e.g., app-layer classifier mirroring a SQL `CASE`) counts as duplication — push to the lowest shared layer.
-  - If two paths must coexist, require a parity test with fixtures covering nulls and edge values.
-- Over-engineering or reinvented solutions where existing libraries, framework features, or project utilities should be used
-- Redundant migrations — flag several migration files that could be one, or one feature's migrations split across PRs. (Exception: don't edit a migration already applied to prod.)
-- Performance and resource leak risks (N+1, unbounded loops, leaked handles/listeners)
-- Type-safety and input-validation gaps
-- Clarity problems that hide defects
-- Dead code or unnecessary complexity
-
-Write findings to `$OUT/findings-maintainability.json`.
-
-#### Agent guidelines (include in both prompts)
-
-- Read ENTIRE changed files, not just diff hunks
-- Be specific and actionable — include file path, line number, concrete fix direction
-- Only flag issues that are likely true defects or meaningful risks
-- Skip linter-only style nits unless they hide correctness risk
-- Include a confidence estimate (high/medium/low) and mark assumptions explicitly
-- If project guidelines exist at `$OUT/project_guidelines.md`, check every rule. Violations are P0 — these guidelines exist for a reason and must be followed
-- If `.claude/rules/` exists in the project, treat every rule file as P0 guidelines — same weight as `docs/review.md`
-- If no issues found, write an empty array `[]`
-
-#### Severity mapping
-
-| Level | Label | Scope |
-|-------|-------|-------|
-| P0 | `critical` | Security, data-loss/corruption, breaking production behavior, project guideline violations (`.claude/rules/`, `docs/review.md`) |
-| P1 | `warning` | Correctness risk, missing tests for changed behavior, major DRY/perf/type issues |
-| P2 | `suggestion` | Clarity and simplification improvements, non-blocking |
-
-#### Finding format
-
-```json
-[{"file": "path/to/file.py", "line": 42, "category": "security|breaking|bug|race-condition|missing-tests|dry|over-engineering|performance|type-safety", "severity": "critical|warning|suggestion", "comment": "Specific actionable feedback", "confidence": "high|medium|low"}]
-```
-
-### 5. Merge and report
-
-```bash
-jq -s 'add' "$OUT/findings-critical.json" "$OUT/findings-maintainability.json" > "$OUT/findings.json"
-```
-
-Report to user:
-- PR link
-- Findings sorted by severity (P0 first)
-- Summary count by severity
-- If no issues, state explicitly and note residual risk (e.g., missing integration tests)
-
-### 6. Re-review after fixes
-
-When the user says fixes are done:
-
-1. Re-run the workflow on latest PR head.
-2. Check each previously reported issue against current file state.
-3. Mark each as resolved, still open, or partially fixed.
-4. Share a concise delta summary.
-
-## Quality bar
-
-- Favor precision over volume.
-- Only report issues that are likely true defects or meaningful risks.
-- Always prioritize merge-blocking concerns before suggestions.
+On "fixes done", re-run on the new head, mark each prior finding resolved / open / partial, share the delta.
