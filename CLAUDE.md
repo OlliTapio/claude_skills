@@ -30,11 +30,11 @@ The skills are symlinked from `~/.claude/skills/` to this repo, so changes take 
 - **plan** - TDD-based planning workflow
 - **pr** - Create PRs with quality checks, review guideline validation, and relevance check
 - **pr-review** - Review GitHub PRs with severity-ranked findings
-- **codex-pr-review** - PR review optimized for Codex runtime
 - **finalize** - Create PR, review, fix issues, squash merge end-to-end
 - **test-on-main** - Exit worktree, checkout branch on main, merge main, run tests
 - **frontend-design** - Distinctive, production-grade frontend interfaces
 - **analytics-view** - Build analytics surfaces with single-source-of-truth metrics and cross-surface parity tests
+- **rule-authoring** - Write path-scoped or always-on .claude/rules/ files following Anthropic best practices
 
 ## Templates
 

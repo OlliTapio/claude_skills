@@ -92,8 +92,4 @@ Ask the user who should review, then add them:
 gh pr edit --add-reviewer username1,username2
 ```
 
-## Important Notes
-
-- **Always compare with default branch**, not HEAD or recent commits
-- **Always merge default branch first** to ensure the branch is up to date
-- Be concise but thorough in PR descriptions — focus on "why" not just "what"
+PR descriptions: concise but thorough — focus on "why" not just "what".
