@@ -1,5 +1,5 @@
 ---
-description: Layered architecture — controllers, services, repos, views; dependency direction and per-layer responsibilities
+description: Layered architecture — dependency direction and per-layer responsibilities for controllers, services, repos, views
 paths:
   - "src/**"
 ---
@@ -14,7 +14,6 @@ Four layers. Dependencies point one way: **controllers → services → repos**;
 - **views/** — output shaping (DTOs, serializers, templates, UI components). Pure functions of their input; no business logic, no data access.
 
 Rules:
-- No layer-skipping: controllers do not touch repos directly.
 - Shared types/entities live in `domain/` (or equivalent), imported by any layer.
-- One service call per controller action; compose across services inside the service layer, not the controller.
-- Keep each file to one layer — no controller that also queries the DB.
+- Compose across services inside the service layer, not the controller.
+- Keep each file to one layer.

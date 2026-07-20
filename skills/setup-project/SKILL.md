@@ -5,15 +5,13 @@ description: Scaffold a new project end-to-end — pick an LLM-friendly language
 
 # setup-project
 
-Bootstrap a project with a fixed layered architecture, enforced by rules and quality gates.
-
 ## 1. Choose the language
 
-We do LLM-driven coding — pick the language the model writes most reliably for the domain. Weigh: size/recency of training corpus, benchmark pass rates, static typing (fewer silent errors for a model to make), and mature tooling (formatter/linter/types/tests). Recommend the best fit and confirm with the user before scaffolding.
+Recommend the language the model codes most reliably for the domain (favor static typing plus mature formatter/linter/test tooling). Confirm with the user before scaffolding.
 
 ## 2. Scaffold the layered architecture
 
-Always use four layers; the cost of the structure is low and it scales. Dependencies point one way: **controllers → services → repos**, with **views** for output.
+Four layers, dependencies pointing one way: **controllers → services → repos**, with **views** for output.
 
 ```
 src/
@@ -25,16 +23,16 @@ src/
 tests/
 ```
 
-Create the directories and a minimal working slice (one controller → service → repo → view) so the pattern is copyable. Match the language's idioms (folder names, module system).
+Create the directories and one working slice (controller → service → repo → view). Match the language's idioms.
 
 ## 3. Install .claude rules
 
 - Copy `templates/rules/layered-architecture.md` into `.claude/rules/` — enforces layer responsibilities and dependency direction.
-- Add project-specific rules with the `rule-authoring` skill (testing conventions, API design, naming). One topic per file, `paths`-scoped. Keep CLAUDE.md for always-on, project-wide facts only.
+- Add project-specific rules with the `rule-authoring` skill (testing, API design, naming).
 
 ## 4. Wire quality gates
 
-Run the `quality-gates` skill: capability matrix per language (format, lint, **complexity, duplication, dead-code**, types, tests), then git **pre-commit** (fast) + **pre-push** (slow) hooks via `core.hooksPath`.
+Run the `quality-gates` skill: per-language checks, then git **pre-commit** (fast) + **pre-push** (slow) hooks.
 
 ## 5. Verify
 
