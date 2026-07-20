@@ -9,12 +9,13 @@ Bootstrap a project with a fixed layered architecture, enforced by rules and qua
 
 ## 1. Choose the language
 
-We do LLM-driven coding — prefer languages LLMs excel at and the org already runs:
+We do LLM-driven coding — pick the language the model writes most reliably for the domain. Weigh: size/recency of training corpus, benchmark pass rates, static typing (fewer silent errors for a model to make), and mature tooling (formatter/linter/types/tests). Then fit that to the domain:
 
-- **TypeScript (Bun)** — default for services, APIs, tools, web. Org standard; strong types, huge training corpus.
-- **Python** — AI/ML, data, voice, scripting (matches pipecat stack).
+- General services, APIs, tools, web → typically **TypeScript** or **Python**.
+- AI/ML, data, scientific → typically **Python**.
+- Perf/systems, strict concurrency → e.g. **Go** or **Rust**.
 
-Only pick another language when a hard requirement demands it (perf → Go/Rust, platform lock-in). Confirm the choice with the user before scaffolding.
+Do not default to whatever other repos use. Recommend the best fit on the criteria above and confirm with the user before scaffolding.
 
 ## 2. Scaffold the layered architecture
 
