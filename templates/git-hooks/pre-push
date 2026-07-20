@@ -1,0 +1,32 @@
+#!/bin/bash
+# Slow quality gate — runs on `git push` over the WHOLE repo.
+# Types, tests, dead-code, whole-repo duplication. Fast checks live in pre-commit.
+# Install: git config core.hooksPath .githooks
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+fail() { echo "pre-push: $1 failed — push blocked (use --no-verify to bypass)" >&2; exit 1; }
+
+# --- TypeScript / JavaScript ---
+if [ -f package.json ]; then
+  run() { if command -v bun >/dev/null; then bun run "$@"; elif command -v pnpm >/dev/null; then pnpm run "$@"; else npm run "$@"; fi; }
+  run tsc         2>&1 || fail "typecheck"
+  run test        2>&1 || fail "tests"
+  run lint:exports 2>&1 || true   # knip / dead-code; enable once baselined
+fi
+
+# --- Python ---
+if [ -f pyproject.toml ]; then
+  PY="python -m"; command -v uv >/dev/null && PY="uv run"
+  { $PY pytest -q 2>&1 && echo; } || fail "pytest"
+  # $PY mypy .  2>&1 || fail "mypy"   # enable if the project uses a type checker
+fi
+
+# --- Whole-repo duplication (language-agnostic) ---
+if command -v npx >/dev/null; then
+  npx --yes jscpd --silent --threshold 5 . 2>&1 || fail "duplication (jscpd)"
+fi
+
+# --- Add a block per additional language (types + tests + dead-code) here ---
+
+exit 0

@@ -35,6 +35,7 @@ The skills are symlinked from `~/.claude/skills/` to this repo, so changes take 
 - **frontend-design** - Distinctive, production-grade frontend interfaces
 - **analytics-view** - Build analytics surfaces with single-source-of-truth metrics and cross-surface parity tests
 - **rule-authoring** - Write path-scoped or always-on .claude/rules/ files following Anthropic best practices
+- **quality-gates** - Set up a project with language-agnostic code-smell/quality gates via git pre-commit (fast) and pre-push (slow) hooks
 
 ## Templates
 
@@ -56,3 +57,12 @@ chmod +x .claude/hooks/*.sh
 - **lint-fix.sh** - Auto-fixes lint after file edits
 
 See `templates/hooks/README.md` for configuration.
+
+### Git hooks (`templates/git-hooks/`)
+
+Versioned git hooks (run outside Claude too), installed by the `quality-gates` skill:
+
+- **pre-commit** - fast, staged files: format, lint, complexity, duplication
+- **pre-push** - slow, whole repo: types, tests, dead-code
+
+See `templates/git-hooks/README.md`.
