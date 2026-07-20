@@ -36,6 +36,7 @@ The skills are symlinked from `~/.claude/skills/` to this repo, so changes take 
 - **analytics-view** - Build analytics surfaces with single-source-of-truth metrics and cross-surface parity tests
 - **rule-authoring** - Write path-scoped or always-on .claude/rules/ files following Anthropic best practices
 - **quality-gates** - Set up a project with language-agnostic code-smell/quality gates via git pre-commit (fast) and pre-push (slow) hooks
+- **setup-project** - Scaffold a new project: LLM-friendly language, layered architecture (controllers/services/repos/views), .claude rules, quality gates
 
 ## Templates
 
@@ -66,3 +67,9 @@ Versioned git hooks (run outside Claude too), installed by the `quality-gates` s
 - **pre-push** - slow, whole repo: types, tests, dead-code
 
 See `templates/git-hooks/README.md`.
+
+### Rules (`templates/rules/`)
+
+Reusable `.claude/rules/*.md` files installed by the `setup-project` skill:
+
+- **layered-architecture.md** - controllers/services/repos/views responsibilities and dependency direction
