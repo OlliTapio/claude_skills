@@ -33,8 +33,8 @@ Spawn **three Agents in parallel** (single message), each with a fresh context a
 - Type-safety and input-validation gaps; clarity that hides defects; dead code
 - Any pasted guideline touching the above
 
-**Agent 3 — Unverified assumptions:**
-Find claims the change *rests on* that nothing proves. Per claim: if it were false, which existing test turns red? Name it, or it's unverified. Read the PR body too — premises are stated most confidently there. Common shapes, not a checklist:
+**Agent 3 — Unverified assumptions:** (have it read `references/assumption-cases.md` first)
+Find claims the change *rests on* that nothing proves. Per claim: if it were false, which existing test turns red? Name it, or it's unverified. Read the PR body. Examples:
 - Prose absolutes about code outside the diff ("only emits X when Y", "never null", "always ordered") — read that code and cite file:line
 - Mocks/fakes/fixtures: behavior derived from the real implementation (cite it), or authored from belief? A fake that diverges on the path under test makes green tests meaningless
 - Tests asserting by *omission* — outcome established by not pushing an event or setting a field, justified by a belief about upstream
