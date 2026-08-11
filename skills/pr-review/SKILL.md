@@ -34,11 +34,10 @@ Spawn **three Agents in parallel** (single message), each with a fresh context a
 - Any pasted guideline touching the above
 
 **Agent 3 — Unverified assumptions:**
-Find claims the change *rests on* that nothing proves. Per claim: if it were false, which existing test turns red? Name it, or it's unverified. Read the PR body too — premises are stated most confidently there.
+Find claims the change *rests on* that nothing proves. Per claim: if it were false, which existing test turns red? Name it, or it's unverified. Read the PR body too — premises are stated most confidently there. Common shapes, not a checklist:
 - Prose absolutes about code outside the diff ("only emits X when Y", "never null", "always ordered") — read that code and cite file:line
 - Mocks/fakes/fixtures: behavior derived from the real implementation (cite it), or authored from belief? A fake that diverges on the path under test makes green tests meaningless
 - Tests asserting by *omission* — outcome established by not pushing an event or setting a field, justified by a belief about upstream
-- Ordering, cancellation, timeout, retry paths; "impossible" branches
 
 Verify what's readable (dependency source, installed packages, schemas) instead of listing manual to-dos. Report the claim, what breaks if wrong, whether any test can falsify it, and the cheapest test that would. Skip claims nothing depends on.
 
