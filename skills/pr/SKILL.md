@@ -66,23 +66,37 @@ git push -u origin "$(git branch --show-current)"
 
 ### Step 6: Create PR
 
+Write the body to answer four questions, each kept short:
+
 ```bash
 gh pr create --base "$DEFAULT_BRANCH" --title "Descriptive PR title" --body "$(cat <<'EOF'
-## Summary
-[2-3 sentences, key files, breaking changes]
+## Why
+[The problem or goal. 1-2 sentences.]
 
-## Changes
+## What
 - [Change 1]
 - [Change 2]
 
-## Technical notes
-- [Async/performance/architecture findings, if any]
+## Implications
+- [Breaking changes, migrations, performance/async effects, follow-ups. Omit if none.]
 
-## Test plan
-- [What was tested, what reviewers should test]
+## How we ensured it works
+- [Tests added/run, manual verification, checks passed.]
 EOF
 )"
 ```
+
+If the PR makes an architecture decision, add an `## Architecture` section: state the decision, the alternative rejected, and why in a few lines, and draw it with a Mermaid diagram (GitHub renders it):
+
+````markdown
+## Architecture
+[Decision + rejected alternative + why, kept short.]
+
+```mermaid
+flowchart LR
+  A[Client] --> B[Service] --> C[(DB)]
+```
+````
 
 ### Step 7: Ask for reviewers
 
@@ -92,4 +106,4 @@ Ask the user who should review, then add them:
 gh pr edit --add-reviewer username1,username2
 ```
 
-PR descriptions: concise but thorough — focus on "why" not just "what".
+PR descriptions: short and skimmable. Lead with why, not just what. Draw out any architecture decision with a Mermaid diagram.
