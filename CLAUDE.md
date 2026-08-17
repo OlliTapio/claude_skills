@@ -30,7 +30,7 @@ The skills are symlinked from `~/.claude/skills/` to this repo, so changes take 
 - **plan** - TDD-based planning workflow
 - **pr** - Create PRs with quality checks, review guideline validation, and relevance check
 - **pr-review** - Review GitHub PRs with severity-ranked findings
-- **explain-diff** - Rich interactive explanation of a code change/diff/PR (HTML or Notion); adapted from Geoffrey Litt's gist
+- **explain-diff** - Rich explanation of a code change/diff/PR as an HTML file, plus an in-chat quiz; adapted from Geoffrey Litt's gist
 - **finalize** - Create PR, review, fix issues, squash merge end-to-end
 - **test-on-main** - Exit worktree, checkout branch on main, merge main, run tests
 - **frontend-design** - Distinctive, production-grade frontend interfaces
