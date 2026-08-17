@@ -1,6 +1,6 @@
 ---
 name: explain-diff
-description: Use when the user asks for a rich explanation of a code change, diff, branch, or PR. Produces a self-contained HTML file with background, intuition, and code walkthrough, then quizzes the user in the chat.
+description: Use when the user asks for a rich explanation of a code change, diff, branch, or PR. Produces a self-contained HTML file with background, intuition, code walkthrough, and how the change was tested, then quizzes the user in the chat.
 ---
 
 # Explain Diff
@@ -14,6 +14,7 @@ Produce a rich explanation of the specified code change as a self-contained HTML
 - **Background**: Explain the existing system relevant to this change. Broadly explore surrounding code first. Include a deep background for beginners (skippable if already familiar), then a narrow background directly relevant to the change.
 - **Intuition**: Explain the core intuition — the essence, not full details. Use concrete examples with toy data. Use figures and diagrams liberally.
 - **Code**: High-level walkthrough of the changes, grouped/ordered understandably.
+- **Testing**: How the change was verified — tests added or changed and what case each one pins down, existing tests that cover it, and any manual verification visible in the diff or PR description. Name what is *not* covered; if there is no test evidence at all, say so plainly.
 
 The document contains no quiz — the quiz happens in the chat (below).
 
