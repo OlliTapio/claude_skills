@@ -12,29 +12,34 @@ Figures carry the mechanism; prose carries the reasoning. Read the diff and surr
 ## Document shape — exactly this, in this order
 
 1. **Title + "In one minute"** — five bullets, ≤20 words each: what changed · why · what breaks if it's wrong · blast radius (files/systems touched) · test status. No TOC, no intro.
-2. **Figures 1..N** — up to 4 numbered figures. Each = caption (≤40 words, self-contained) + up to 6 sentences of prose. Nothing else.
+2. **Figures 1..N** — up to 4 numbered figures. Each = a short title, a caption (≤40 words, self-contained), and up to 6 sentences of prose. Nothing else.
 3. **Testing** — one table (`test · what it pins · level`), ≤5 rows, ≤10-word cells, plus a "not covered" list. No test evidence: say so in one line.
+4. **Rejected approaches** — one table (`approach · why it died`), ≤3 rows, ≤15-word cells. One row per decision the prose calls deliberate. If no alternative was weighed, say that in a line instead.
 
 Nothing else. No summary, no "things worth a second look", no beginner tutorial section.
 
 ## Budgets — count before saving
 
-- **Prose: 700-900 words.** Counts only what is read linearly — paragraphs, bullets, captions. Diagram labels, table cells, and quoted code are glanced at, not read, and are governed by the structural caps below instead.
-- Under 700 words means a decision is going unexplained. Find it and say it, rather than padding.
+- **Prose: ≤900 words.** Counts only what is read linearly — paragraphs, bullets, captions, figure titles. Diagram labels, table cells, and quoted code are glanced at, not read, and have structural caps instead.
+- No floor. Length is whatever the decision list below costs; if that list is complete at 500 words, ship 500.
 - Figures: **≤4**, of which **≥3 are true diagrams** (not text lists). Vary the kinds — repeating one grammar is fine, four different ones is not.
-- Every sentence, caption, and bullet ≤25 words.
+- Every sentence, caption, and bullet ≤25 words. Vary the lengths: if every sentence sits within a few words of the cap, you are filling to spec rather than making points.
 - Code excerpts: ≤4, ≤12 lines each, elided with `…`, each attached to a figure.
 - `<details>`: ≤2 blocks, ≤300 words total.
 
 Over budget: delete a figure or a whole claim — never compress sentences.
 
-**Every design decision on the page needs its reason on the page.** Why this is safe, why the guard is unnecessary, why the alternative lost. A reason that lives only in a code excerpt, a docstring, or the commit message has not been explained. This outranks the word budget: if stating a reason breaks the cap, cut a figure instead.
+**Before writing, list every deliberate decision** — a guard omitted, a field left alone, an alternative rejected, an inconsistency kept. Each gets one sentence naming its reason. That list, not a word count, sets the length.
+
+A reason living only in a code excerpt, docstring, or commit message has not been explained. Neither has a pointer to one: "the schema comment states why" is not a reason. Words like *deliberately*, *on purpose*, *intentionally* oblige the reason in the same sentence.
+
+This outranks the word budget: if stating a reason breaks the cap, cut a figure.
 
 ## Figures
 
 Vocabulary — pick from these, invent none:
 
-- **Before/after flow** — identical layout and node positions; only the changed node differs, and it is the only colored one.
+- **Before/after flow** — identical layout, node positions, and input values; only the changed node differs, and it is the only colored one. Feeding the panels different inputs teaches a difference the change did not make.
 - **Decision gate** — the conditions that route a case, the outcome per branch, and next to each gate the data it reads (column, log table, config field).
 - **State machine** — states, and the transitions the change adds or removes.
 - **Message sequence** — components in columns, arrows carrying example payloads.
@@ -46,9 +51,11 @@ Rules:
 - Figure 1 must let a reader reconstruct the whole change with no prose.
 - One shared visual language: same component, same color, everywhere. One legend, beside Figure 1.
 - Label with concrete example data (`order_id=42`, `status="pending"`), never type names.
-- ≤9 nodes. Collapse to the relevant subgraph rather than shrinking text.
+- **A label names states and values; it never argues.** Any label over 8 words, or containing a because/so clause, is prose — move it to the caption where the budget can see it.
+- ≤9 nodes per panel; a before/after figure counts each panel separately, and both panels carry the same count. Collapse to the relevant subgraph rather than shrinking text.
 - Flow runs one direction; branch downward. Never reverse reading direction inside a panel.
-- Sizing: give each SVG `width: 100%; max-width: <viewBox width>px; height: auto` so it renders at full size on desktop and scales down on mobile. Constrain reading measure on `p`/`li`/`table` (~70ch), never on the wrapper — a wrapper `max-width` shrinks diagram text below its stated size.
+- Sizing: keep `viewBox` width ≤760. Inside an `overflow-x: auto` wrapper, set `width: 100%; max-width: <viewBox>px; height: auto; min-width: 640px` so a narrow screen scrolls the figure instead of shrinking its text. `width: 100%` alone scales a 920px diagram to 0.38x on a phone, rendering 13px labels at 5px.
+- Constrain reading measure on `p`/`li`/`table` (~70ch), never on the wrapper — a wrapper `max-width` shrinks diagram text.
 - No gradients, icons, shadows, or 3D. Every box, arrow, and color means something.
 - A figure that restates its own code excerpt, its caption, or a testing row is not a figure. Cut it and keep the excerpt.
 - Legend swatches must all appear in Figure 1. A color introduced later belongs in that figure's caption.
@@ -71,15 +78,17 @@ Show the change, don't describe it. For the 3-5 changes that matter, hang a `<pr
 
 State each result in chat, one line each. Fix, don't rationalize.
 
-1. Prose words (paragraphs, bullets, captions; not labels, cells, or code) = ? Must be 700-900.
-   Every decision's reason is stated on the page, not only in an excerpt: yes/no.
+1. Prose words (paragraphs, bullets, captions, figure titles; not labels, cells, or code) = ? Must be ≤900.
+   List the deliberate decisions and, beside each, the sentence giving its reason. Any without one: fix before saving.
+   Sentence lengths vary rather than clustering at the cap: yes/no.
 2. Figures = ? ≤4. True diagrams = ? ≥3.
 3. Every paragraph points at a numbered figure: yes/no.
    Grep each figure's key phrases against its caption, code excerpt, and the testing table — no fact stated twice: yes/no.
 4. Every caption reads standalone, ≤40 words: yes/no.
 5. Same component, same color across figures; one legend: yes/no.
 6. Each SVG scales (`width:100%`, `max-width`, `height:auto`) and no wrapper `max-width`: yes/no.
-   Render check: no label wider than the box holding it, no text colliding with a neighbouring shape, nothing under 12px: yes/no.
+   Render check: no label wider than the box holding it, no text colliding with a neighbour. Compute smallest label × (390 ÷ widest `viewBox`) ≥ 12px: yes/no.
+   No label over 8 words or carrying a because/so clause: yes/no.
 7. Every `<pre>` or styled code block sets `white-space: pre` or `pre-wrap` — otherwise newlines collapse: yes/no.
 
 ## Output
