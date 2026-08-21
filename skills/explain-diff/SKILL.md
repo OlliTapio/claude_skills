@@ -7,25 +7,28 @@ description: Use when the user asks for a rich explanation of a code change, dif
 
 Adapted from Geoffrey Litt's `explain-diff` prompts: https://gist.github.com/geoffreylitt/a29df1b5f9865506e8952488eac3d524
 
-The figures carry the explanation; prose is connective tissue. Read the diff and surrounding code broadly, then spend the effort on the figures.
+Figures carry the mechanism; prose carries the reasoning. Read the diff and surrounding code broadly, then spend the effort on the figures — but never at the cost of leaving a decision unexplained.
 
 ## Document shape — exactly this, in this order
 
 1. **Title + "In one minute"** — five bullets, ≤20 words each: what changed · why · what breaks if it's wrong · blast radius (files/systems touched) · test status. No TOC, no intro.
-2. **Figures 1..N** — up to 4 numbered figures. Each = caption (≤40 words, self-contained) + ≤3 sentences of prose. Nothing else.
+2. **Figures 1..N** — up to 4 numbered figures. Each = caption (≤40 words, self-contained) + up to 6 sentences of prose. Nothing else.
 3. **Testing** — one table (`test · what it pins · level`), ≤5 rows, ≤10-word cells, plus a "not covered" list. No test evidence: say so in one line.
 
 Nothing else. No summary, no "things worth a second look", no beginner tutorial section.
 
 ## Budgets — count before saving
 
-- **Total on-page words: 700.** Counts prose, bullets, captions, table cells, and diagram labels. Excludes quoted code.
+- **Prose: 700-900 words.** Counts only what is read linearly — paragraphs, bullets, captions. Diagram labels, table cells, and quoted code are glanced at, not read, and are governed by the structural caps below instead.
+- Under 700 words means a decision is going unexplained. Find it and say it, rather than padding.
 - Figures: **≤4**, of which **≥3 are true diagrams** (not text lists). Vary the kinds — repeating one grammar is fine, four different ones is not.
 - Every sentence, caption, and bullet ≤25 words.
 - Code excerpts: ≤4, ≤12 lines each, elided with `…`, each attached to a figure.
 - `<details>`: ≤2 blocks, ≤300 words total.
 
-These are ceilings, not targets. Over budget: delete a figure or its prose — never compress sentences.
+Over budget: delete a figure or a whole claim — never compress sentences.
+
+**Every design decision on the page needs its reason on the page.** Why this is safe, why the guard is unnecessary, why the alternative lost. A reason that lives only in a code excerpt, a docstring, or the commit message has not been explained. This outranks the word budget: if stating a reason breaks the cap, cut a figure instead.
 
 ## Figures
 
@@ -68,7 +71,8 @@ Show the change, don't describe it. For the 3-5 changes that matter, hang a `<pr
 
 State each result in chat, one line each. Fix, don't rationalize.
 
-1. Total on-page words (including captions, bullets, table cells) = ? Must be ≤700.
+1. Prose words (paragraphs, bullets, captions; not labels, cells, or code) = ? Must be 700-900.
+   Every decision's reason is stated on the page, not only in an excerpt: yes/no.
 2. Figures = ? ≤4. True diagrams = ? ≥3.
 3. Every paragraph points at a numbered figure: yes/no.
    Grep each figure's key phrases against its caption, code excerpt, and the testing table — no fact stated twice: yes/no.
