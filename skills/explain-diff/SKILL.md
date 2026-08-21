@@ -19,13 +19,13 @@ Nothing else. No summary, no "things worth a second look", no beginner tutorial 
 
 ## Budgets — count before saving
 
-- **Total on-page words: 700.** Captions, bullets, and table cells count.
-- Figures: **≤4**, of which **≥3 are true diagrams** (not text lists). Reuse ≤2 vocabulary kinds.
+- **Total on-page words: 700.** Counts prose, bullets, captions, table cells, and diagram labels. Excludes quoted code.
+- Figures: **≤4**, of which **≥3 are true diagrams** (not text lists). Vary the kinds — repeating one grammar is fine, four different ones is not.
 - Every sentence, caption, and bullet ≤25 words.
 - Code excerpts: ≤4, ≤12 lines each, elided with `…`, each attached to a figure.
 - `<details>`: ≤2 blocks, ≤300 words total.
 
-Over budget: delete a figure or its prose. Never compress sentences.
+These are ceilings, not targets. Over budget: delete a figure or its prose — never compress sentences.
 
 ## Figures
 
@@ -45,9 +45,10 @@ Rules:
 - Label with concrete example data (`order_id=42`, `status="pending"`), never type names.
 - ≤9 nodes. Collapse to the relevant subgraph rather than shrinking text.
 - Flow runs one direction; branch downward. Never reverse reading direction inside a panel.
-- Sizing: the figure container must be at least as wide as the widest `viewBox`. Never put a text `max-width` on the page wrapper — it shrinks SVG text below its stated size.
+- Sizing: give each SVG `width: 100%; max-width: <viewBox width>px; height: auto` so it renders at full size on desktop and scales down on mobile. Constrain reading measure on `p`/`li`/`table` (~70ch), never on the wrapper — a wrapper `max-width` shrinks diagram text below its stated size.
 - No gradients, icons, shadows, or 3D. Every box, arrow, and color means something.
-- A figure that restates a list is not a figure. Keep the list.
+- A figure that restates its own code excerpt, its caption, or a testing row is not a figure. Cut it and keep the excerpt.
+- Legend swatches must all appear in Figure 1. A color introduced later belongs in that figure's caption.
 
 ## Code
 
@@ -70,9 +71,11 @@ State each result in chat, one line each. Fix, don't rationalize.
 1. Total on-page words (including captions, bullets, table cells) = ? Must be ≤700.
 2. Figures = ? ≤4. True diagrams = ? ≥3.
 3. Every paragraph points at a numbered figure: yes/no.
+   Grep each figure's key phrases against its caption, code excerpt, and the testing table — no fact stated twice: yes/no.
 4. Every caption reads standalone, ≤40 words: yes/no.
 5. Same component, same color across figures; one legend: yes/no.
-6. No text `max-width` on the wrapper; each figure container ≥ its `viewBox` width: yes/no.
+6. Each SVG scales (`width:100%`, `max-width`, `height:auto`) and no wrapper `max-width`: yes/no.
+   Render check: no label wider than the box holding it, no text colliding with a neighbouring shape, nothing under 12px: yes/no.
 7. Every `<pre>` or styled code block sets `white-space: pre` or `pre-wrap` — otherwise newlines collapse: yes/no.
 
 ## Output
