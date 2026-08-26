@@ -15,9 +15,15 @@ My personal Claude Code skills. For sharing between computers and colleagues.
 - **`frontend-design`** — production-grade frontend output
 - **`codex-pr-review`** — `pr-review` retuned for Codex
 
+## Hooks
+
+`hooks/` — user-global hooks, symlinked into `~/.claude/` so they apply to every repo on the machine.
+
+- **`fetch-default-branch.sh`** — fetches `origin/<default-branch>` before Claude Code cuts a worktree, so `baseRef: fresh` actually means fresh. Without it, new worktrees start from however stale your last `git fetch` was.
+
 ## Templates
 
-`templates/hooks/` — drop-in Claude Code hooks (`precommit.sh`, `lint-fix.sh`) that enforce quality gates at the harness level.
+`templates/hooks/` — drop-in *project-level* Claude Code hooks (`precommit.sh`, `lint-fix.sh`) that enforce quality gates at the harness level. Copied into a single repo, unlike `hooks/` above.
 
 ## Install
 
@@ -25,4 +31,11 @@ Symlink a skill into your Claude Code skills directory:
 
 ```bash
 ln -s "$PWD/skills/pr" ~/.claude/skills/pr
+```
+
+Global hooks are symlinked the same way, plus a `~/.claude/settings.json` entry — see [`hooks/README.md`](hooks/README.md):
+
+```bash
+mkdir -p ~/.claude/hooks
+ln -s "$PWD/hooks/fetch-default-branch.sh" ~/.claude/hooks/fetch-default-branch.sh
 ```
