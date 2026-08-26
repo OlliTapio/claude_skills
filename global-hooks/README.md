@@ -45,9 +45,12 @@ Three registrations, because three different paths create worktrees:
 
 | Event | Mode | Why |
 |---|---|---|
-| `PreToolUse` matcher `EnterWorktree` | blocking, 30s | Runs right before the worktree is created. Must block — an async fetch would race worktree creation and lose. |
-| `SubagentStart` | async | Subagents launched with `isolation: "worktree"` fire this, **not** `SessionStart`. Without it, agent-isolated worktrees get no fetch. |
-| `SessionStart` | async | Covers `claude --worktree` at startup, and keeps refs warm generally. |
+| `PreToolUse` matcher `EnterWorktree` | blocking | The load-bearing one. Runs right before the worktree is created, so `fresh` resolves against a just-updated ref. Must block — an async fetch would race worktree creation and lose. |
+| `SubagentStart` | async | Subagents fire this, **not** `SessionStart`, so it's the only place to catch `isolation: "worktree"` agents. Best-effort: it is not established that it runs before the worktree is cut, so treat it as keeping refs warm rather than as a guarantee. |
+| `SessionStart` | async | Covers `claude --worktree` at startup and keeps refs warm generally. |
+
+Only the `EnterWorktree` registration is guaranteed to land before the worktree
+exists. The other two are opportunistic.
 
 ### What the script does
 
@@ -70,14 +73,19 @@ make things worse than not having it:
   exported *before* the first network call, so a missing credential fails
   instantly instead of blocking on a tty that isn't there.
 - **Bounded.** Both network calls are wrapped in `timeout`, budgeted 8s + 15s so
-  the worst case stays under Claude Code's 30s hook timeout and exits cleanly
-  rather than being killed. Measured at 24s against a blackholed remote.
+  the worst case stays under the `"timeout": 30` each registration sets, and
+  exits cleanly rather than being killed mid-flight. Measured at 23s against a
+  blackholed remote. Set that `timeout` on *every* entry — the harness default
+  is far higher, so the bound only exists because you configure it.
 - **No GNU coreutils assumption.** `timeout` ships on Linux but not stock macOS;
   the script tries `timeout`, then `gtimeout` (`brew install coreutils`). With
   neither, `http.lowSpeed*` and SSH `ConnectTimeout` help but cannot bound a
   blackholed HTTP connect — git has no portable HTTP connect timeout, and
-  `http.connectTimeout` is unsupported by Apple git. There, Claude Code's 30s
-  hook timeout is the backstop.
+  `http.connectTimeout` is unsupported by Apple git. There the configured 30s is
+  the only backstop; measured 150s unbounded without it.
+- **SSH options are inserted, not appended.** `ssh` honours the *first*
+  occurrence of a repeated `-o`, so appending `-oBatchMode=yes` would silently
+  lose to a user who already sets `-oBatchMode=no`.
 - **Real JSON parsing.** Uses `python3` when present, falling back to `awk`'s
   first-match. A regex over raw JSON truncates on escaped quotes and can match a
   nested `"cwd"` instead of the top-level one.
@@ -110,13 +118,15 @@ Then merge into `~/.claude/settings.json` (**not** a project `.claude/settings.j
       { "matcher": ".*",
         "hooks": [{ "type": "command",
                     "command": "/Users/<you>/.claude/hooks/fetch-default-branch.sh",
-                    "async": true }] }
+                    "async": true,
+                    "timeout": 30 }] }
     ],
     "SessionStart": [
       { "matcher": ".*",
         "hooks": [{ "type": "command",
                     "command": "/Users/<you>/.claude/hooks/fetch-default-branch.sh",
-                    "async": true }] }
+                    "async": true,
+                    "timeout": 30 }] }
     ]
   }
 }
@@ -124,6 +134,12 @@ Then merge into `~/.claude/settings.json` (**not** a project `.claude/settings.j
 
 `~` is not expanded in hook commands — use an absolute path. Existing entries
 for these events are additive; append rather than replace.
+
+> **Upgrading from an earlier checkout?** This directory used to be `hooks/`.
+> Re-point the symlink or it will dangle:
+> ```bash
+> ln -sfn "$PWD/global-hooks/fetch-default-branch.sh" ~/.claude/hooks/fetch-default-branch.sh
+> ```
 
 ### Verify
 

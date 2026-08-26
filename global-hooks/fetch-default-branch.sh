@@ -43,18 +43,28 @@ git remote get-url origin >/dev/null 2>&1 || exit 0
 # --- Guards must be established BEFORE any command that touches the network. -
 
 # A blocking PreToolUse hook must never sit waiting on a credential prompt.
-# Append rather than substitute, so a user's own GIT_SSH_COMMAND still gets
-# BatchMode instead of silently losing it.
+#
+# ssh honours the FIRST occurrence of a repeated -o, so these must be INSERTED
+# after the command word, not appended -- appending would silently lose to a
+# user who already sets -oBatchMode=no. Everything the user wrote is preserved,
+# it just no longer overrides the two options we require.
 GIT_TERMINAL_PROMPT=0
-GIT_SSH_COMMAND="${GIT_SSH_COMMAND:-ssh} -oBatchMode=yes"
+if [ -n "${GIT_SSH_COMMAND:-}" ]; then
+  _cmd=${GIT_SSH_COMMAND%% *}
+  _rest=${GIT_SSH_COMMAND#"$_cmd"}
+  GIT_SSH_COMMAND="$_cmd -oBatchMode=yes -oConnectTimeout=5$_rest"
+else
+  GIT_SSH_COMMAND="ssh -oBatchMode=yes -oConnectTimeout=5"
+fi
 export GIT_TERMINAL_PROMPT GIT_SSH_COMMAND
 
 # `timeout` is GNU coreutils: present on Linux, absent on stock macOS,
 # available as `gtimeout` via `brew install coreutils`. Degrade gracefully.
 #
-# Budget matters: this script can make two network calls, and the PreToolUse
-# registration is killed by Claude Code at 30s. 8 + 15 keeps the worst case
-# under that, so we fail fast and exit cleanly rather than being cut off.
+# Budget matters: this script can make two network calls, and every
+# registration sets `"timeout": 30` (the harness default is far higher, so the
+# bound only exists because we configure it). 8 + 15 keeps the worst case under
+# that, so we fail fast and exit cleanly rather than being cut off mid-flight.
 if command -v timeout >/dev/null 2>&1; then
   TIMEOUT_BIN=timeout
 elif command -v gtimeout >/dev/null 2>&1; then
@@ -74,11 +84,9 @@ fi
 # These help but do not replace them: http.lowSpeed* only applies once a
 # connection is established, and git has no portable HTTP connect timeout
 # (http.connectTimeout is unsupported by Apple git). Against a blackholed host
-# the `timeout` wrapper is what actually bounds us; with no `timeout` binary
-# at all, Claude Code's own 30s hook timeout is the backstop.
+# the `timeout` wrapper is what actually bounds us; with no `timeout` binary at
+# all, the configured 30s hook timeout is the only backstop.
 GIT="git -c http.lowSpeedLimit=1024 -c http.lowSpeedTime=10"
-GIT_SSH_COMMAND="$GIT_SSH_COMMAND -oConnectTimeout=5"
-export GIT_SSH_COMMAND
 
 # Resolve the default branch. Cached origin/HEAD first -- free and offline.
 db=$(git symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||')
@@ -88,6 +96,7 @@ db=$(git symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^
 # ls-remote --symref is far cheaper than `git remote show`, which enumerates
 # every branch.
 if [ -z "$db" ]; then
+  # shellcheck disable=SC2086  # word splitting of $T_LOOKUP/$GIT is intended
   db=$($T_LOOKUP $GIT ls-remote --symref origin HEAD 2>/dev/null \
        | sed -n 's|^ref: refs/heads/\([^[:space:]]*\)[[:space:]]*HEAD$|\1|p')
 fi
@@ -97,6 +106,7 @@ fi
 # Fetch only that one branch, not every ref, to stay fast. No --prune: with an
 # explicit refspec it cannot clean up other stale refs anyway, and it would
 # delete this very ref if the branch were renamed upstream.
+# shellcheck disable=SC2086  # word splitting of $T_FETCH/$GIT is intended
 $T_FETCH $GIT fetch --quiet origin \
   "+refs/heads/$db:refs/remotes/origin/$db" 2>/dev/null
 

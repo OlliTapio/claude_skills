@@ -1,4 +1,7 @@
 #!/bin/sh
+# shellcheck disable=SC2015  # `cond && ok ... || bad ...` is safe here: both
+# helpers always return 0, so the || branch only runs when cond is false.
+#
 # Self-contained tests for fetch-default-branch.sh.
 # Builds its own scratch repos -- no dependency on the machine's checkouts.
 #
@@ -99,6 +102,74 @@ elif command -v timeout >/dev/null 2>&1 || command -v gtimeout >/dev/null 2>&1; 
 else
   ok "blackholed remote exits 0 (${el}s; no timeout binary, unbounded by design)"
 fi
+
+echo
+echo "== guards are established before the first network call =="
+# Shim `git` to record the environment at the moment of each network call.
+# Without this, deleting the guard exports still passes every other test.
+REALGIT=$(command -v git)
+mkdir -p "$TMP/shim"
+GUARD_LOG="$TMP/guard.log"
+export GUARD_LOG REALGIT
+cat > "$TMP/shim/git" <<'SHIM'
+#!/bin/sh
+for a in "$@"; do
+  case $a in
+    ls-remote|fetch)
+      printf 'TERMPROMPT=%s SSHCMD=%s\n' \
+        "${GIT_TERMINAL_PROMPT-unset}" "${GIT_SSH_COMMAND-unset}" >> "$GUARD_LOG"
+      break ;;
+  esac
+done
+exec "$REALGIT" "$@"
+SHIM
+chmod +x "$TMP/shim/git"
+
+mkrepo guards main
+: > "$GUARD_LOG"
+PATH="$TMP/shim:$PATH" sh -c "printf '%s' '{\"cwd\":\"$TMP/guards-consumer\"}' | '$HOOK'" >/dev/null 2>&1
+
+if [ ! -s "$GUARD_LOG" ]; then
+  bad "guard shim observed a network call" "no ls-remote/fetch recorded"
+else
+  grep -q 'TERMPROMPT=0' "$GUARD_LOG" \
+    && ok "GIT_TERMINAL_PROMPT=0 set before network call" \
+    || bad "GIT_TERMINAL_PROMPT=0 set before network call" "$(cat "$GUARD_LOG")"
+  grep -q 'BatchMode=yes' "$GUARD_LOG" \
+    && ok "ssh BatchMode set before network call" \
+    || bad "ssh BatchMode set before network call" "$(cat "$GUARD_LOG")"
+fi
+
+# ssh honours the FIRST -o, so our options must be inserted after the command
+# word -- appending would lose to a user who already set BatchMode=no.
+: > "$GUARD_LOG"
+mkrepo sshpre main
+PATH="$TMP/shim:$PATH" GIT_SSH_COMMAND="ssh -oBatchMode=no -i /tmp/k" \
+  sh -c "printf '%s' '{\"cwd\":\"$TMP/sshpre-consumer\"}' | '$HOOK'" >/dev/null 2>&1
+line=$(head -1 "$GUARD_LOG")
+case $line in
+  *"ssh -oBatchMode=yes -oConnectTimeout=5 -oBatchMode=no -i /tmp/k"*)
+    ok "our ssh options precede a user's existing GIT_SSH_COMMAND" ;;
+  *)
+    bad "our ssh options precede a user's existing GIT_SSH_COMMAND" "$line" ;;
+esac
+
+echo
+echo "== awk fallback works without python3 =="
+# The regex fallback is never exercised on a machine that has python3. Shadow
+# python3 with a stub that always fails, rather than stripping PATH -- git
+# resolves its libexec helpers relative to its own binary, so a symlinked git
+# in a bare PATH breaks for reasons unrelated to this hook.
+mkdir -p "$TMP/nopy"
+printf '#!/bin/sh\nexit 127\n' > "$TMP/nopy/python3"
+chmod +x "$TMP/nopy/python3"
+mkrepo nopy main
+PATH="$TMP/nopy:$PATH" sh -c \
+  "printf '%s' '{\"cwd\":\"$TMP/nopy-consumer\",\"tool_input\":{\"cwd\":\"/does/not/exist\"}}' | '$HOOK'" \
+  >/dev/null 2>&1
+got=$(git -C "$TMP/nopy-consumer" log -1 --format=%s origin/main 2>/dev/null)
+[ "$got" = "NEW" ] && ok "awk fallback parses cwd when python3 is unavailable" \
+                   || bad "awk fallback parses cwd when python3 is unavailable" "origin/main=$got"
 
 echo
 [ "$fail" -eq 0 ] && echo "ALL PASS" || echo "FAILURES"
