@@ -64,10 +64,79 @@ after=$(git -C "$TMP/plain-consumer" log -1 --format=%s origin/main)
   && ok "advances a stale remote-tracking ref" \
   || bad "advances a stale remote-tracking ref" "$before -> $after"
 
-# The local checkout must be left alone -- we only move refs/remotes/*.
+# ... and so must the local branch, when doing so is lossless: this consumer is
+# on main, clean, and strictly behind.
 head=$(git -C "$TMP/plain-consumer" log -1 --format=%s HEAD)
-[ "$head" = "first" ] && ok "leaves local HEAD untouched" \
-                      || bad "leaves local HEAD untouched" "HEAD=$head"
+[ "$head" = "NEW" ] && ok "fast-forwards a clean checked-out default branch" \
+                    || bad "fast-forwards a clean checked-out default branch" "HEAD=$head"
+
+# ff via `merge --ff-only`, so the index must agree with the new tree. A bare
+# ref move (update-ref / --update-head-ok) leaves a staged deletion of every
+# file the new commits added -- the footgun this guards against.
+st=$(git -C "$TMP/plain-consumer" status --porcelain 2>/dev/null)
+[ -z "$st" ] && ok "fast-forward leaves the index and tree consistent" \
+             || bad "fast-forward leaves the index and tree consistent" "status: $st"
+
+# The opt-out must fall back to the refs/remotes-only behaviour.
+mkrepo optout main
+CLAUDE_HOOK_FF_LOCAL_DEFAULT=0 sh -c \
+  "printf '%s' '{\"cwd\":\"$TMP/optout-consumer\"}' | '$HOOK'" >/dev/null 2>&1
+head=$(git -C "$TMP/optout-consumer" log -1 --format=%s HEAD)
+rem=$(git -C "$TMP/optout-consumer" log -1 --format=%s origin/main)
+[ "$head" = "first" ] && [ "$rem" = "NEW" ] \
+  && ok "CLAUDE_HOOK_FF_LOCAL_DEFAULT=0 fetches but does not move local main" \
+  || bad "CLAUDE_HOOK_FF_LOCAL_DEFAULT=0 fetches but does not move local main" "HEAD=$head origin=$rem"
+
+echo
+echo "== local fast-forward is refused unless provably lossless =="
+
+# Uncommitted work: never move the branch out from under it.
+mkrepo dirty main
+echo scratch > "$TMP/dirty-consumer/tracked.txt"
+git -C "$TMP/dirty-consumer" -c user.email=t@t -c user.name=t add tracked.txt
+git -C "$TMP/dirty-consumer" -c user.email=t@t -c user.name=t commit -q -m local-tracked
+git -C "$TMP/dirty-consumer" reset -q --soft HEAD~1   # keeps the change staged
+printf '%s' "{\"cwd\":\"$TMP/dirty-consumer\"}" | "$HOOK" >/dev/null 2>&1
+head=$(git -C "$TMP/dirty-consumer" log -1 --format=%s HEAD)
+[ "$head" = "first" ] && ok "skips a worktree with uncommitted changes" \
+                      || bad "skips a worktree with uncommitted changes" "HEAD=$head"
+
+# Diverged local branch: a fast-forward is impossible, so nothing may be rewritten.
+mkrepo diverged main
+git -C "$TMP/diverged-consumer" -c user.email=t@t -c user.name=t \
+    commit -q --allow-empty -m LOCAL-ONLY
+printf '%s' "{\"cwd\":\"$TMP/diverged-consumer\"}" | "$HOOK" >/dev/null 2>&1
+head=$(git -C "$TMP/diverged-consumer" log -1 --format=%s HEAD)
+[ "$head" = "LOCAL-ONLY" ] && ok "never rewrites a diverged local branch" \
+                           || bad "never rewrites a diverged local branch" "HEAD=$head"
+
+# A half-finished merge is human state -- hard stop even though the tree may look clean.
+mkrepo midmerge main
+git -C "$TMP/midmerge-consumer" rev-parse HEAD > \
+  "$(git -C "$TMP/midmerge-consumer" rev-parse --absolute-git-dir)/MERGE_HEAD"
+printf '%s' "{\"cwd\":\"$TMP/midmerge-consumer\"}" | "$HOOK" >/dev/null 2>&1
+head=$(git -C "$TMP/midmerge-consumer" log -1 --format=%s HEAD)
+[ "$head" = "first" ] && ok "skips a worktree with a merge in progress" \
+                      || bad "skips a worktree with a merge in progress" "HEAD=$head"
+
+# Not checked out anywhere: a bare ref move is safe, and is what should happen.
+mkrepo detached main
+git -C "$TMP/detached-consumer" checkout -q --detach
+printf '%s' "{\"cwd\":\"$TMP/detached-consumer\"}" | "$HOOK" >/dev/null 2>&1
+got=$(git -C "$TMP/detached-consumer" log -1 --format=%s refs/heads/main)
+[ "$got" = "NEW" ] && ok "moves the ref when the branch is checked out nowhere" \
+                   || bad "moves the ref when the branch is checked out nowhere" "main=$got"
+
+# On another branch: main is checked out nowhere, so it may advance -- but the
+# branch the user is actually on must not be touched.
+mkrepo elsewhere main
+git -C "$TMP/elsewhere-consumer" checkout -q -b feature
+printf '%s' "{\"cwd\":\"$TMP/elsewhere-consumer\"}" | "$HOOK" >/dev/null 2>&1
+main=$(git -C "$TMP/elsewhere-consumer" log -1 --format=%s refs/heads/main)
+feat=$(git -C "$TMP/elsewhere-consumer" log -1 --format=%s HEAD)
+[ "$main" = "NEW" ] && [ "$feat" = "first" ] \
+  && ok "advances main while leaving the checked-out feature branch alone" \
+  || bad "advances main while leaving the checked-out feature branch alone" "main=$main feature=$feat"
 
 # Default branch must come from the repo, not a hardcoded "main".
 mkrepo odd trunk

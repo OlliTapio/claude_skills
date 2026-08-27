@@ -43,7 +43,7 @@ The skills are symlinked from `~/.claude/skills/` to this repo, so changes take 
 
 Hooks registered in the **user-global** `~/.claude/settings.json`, so they apply to every repo on the machine. Symlinked from this repo (like skills), not copied — unlike `templates/hooks/`, which are project-level and copied into one repo.
 
-- **fetch-default-branch.sh** - fetches `origin/<default-branch>` before Claude Code cuts a worktree, so `worktree.baseRef: fresh` isn't resolved against a stale local ref
+- **fetch-default-branch.sh** - fetches `origin/<default-branch>` before Claude Code cuts a worktree, so `worktree.baseRef: fresh` isn't resolved against a stale local ref; also fast-forwards the *local* default branch (what agents read via `git log main` / `git merge main`) when that is provably lossless
 
 Installing one takes two steps — symlink *and* a settings.json registration:
 
