@@ -39,6 +39,22 @@ The skills are symlinked from `~/.claude/skills/` to this repo, so changes take 
 - **quality-gates** - Set up a project with language-agnostic code-smell/quality gates via git pre-commit (fast) and pre-push (slow) hooks
 - **setup-project** - Scaffold a new project: LLM-friendly language, layered architecture (controllers/services/repos/views), .claude rules, quality gates
 
+## Global hooks (`global-hooks/`)
+
+Hooks registered in the **user-global** `~/.claude/settings.json`, so they apply to every repo on the machine. Symlinked from this repo (like skills), not copied — unlike `templates/hooks/`, which are project-level and copied into one repo.
+
+- **fetch-default-branch.sh** - fetches `origin/<default-branch>` before Claude Code cuts a worktree, so `worktree.baseRef: fresh` isn't resolved against a stale local ref
+
+Installing one takes two steps — symlink *and* a settings.json registration:
+
+```bash
+mkdir -p ~/.claude/hooks
+ln -s /Users/olli/repositories/claude_skills/global-hooks/<hook>.sh ~/.claude/hooks/<hook>.sh
+# then merge the hook's event registration into ~/.claude/settings.json
+```
+
+See `global-hooks/README.md` for the events, the JSON to merge, and design constraints.
+
 ## Templates
 
 Reusable configuration templates in `templates/`:
