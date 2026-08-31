@@ -1,6 +1,6 @@
 ---
 name: explain-diff
-description: Use when the user asks for a rich explanation of a code change, diff, branch, or PR. Produces a short figure-led HTML page — a five-bullet summary plus up to four numbered diagrams — then quizzes the user in the chat.
+description: Use when the user asks for a rich explanation of a code change, diff, branch, or PR. Produces a short figure-led HTML page — a five-bullet summary plus up to four numbered diagrams.
 ---
 
 # Explain Diff
@@ -96,22 +96,3 @@ State each result in chat, one line each. Fix, don't rationalize.
 - One self-contained HTML file: inline CSS and JS, no external dependencies. Single page, responsive.
 - Save outside the code repo, filename prefixed with today's date: e.g. `/tmp/2026-01-12-explanation-<slug>.html`.
 - Diagrams are HTML/CSS or inline SVG. Code blocks use `<pre>`.
-
-## Quiz — in chat, not in the document
-
-After delivering the file, offer the quiz; run it if the user accepts.
-
-**Anchor every question before asking it.** Write the question, then name the figure, caption, table row, or bullet on the page that contains the answer. No anchor means one of two things:
-
-- The page is missing something a reader needs — patch the page, then ask.
-- The question is testing the repo rather than the explanation — cut it.
-
-A fact that appears only inside a code excerpt is not fair game unless the excerpt or its caption states the *reason*, not just the line.
-
-**Every stem must be self-contained.** State each precondition the scenario needs to resolve. If the answer turns on a fact the stem omits, the question is broken, not the answer.
-
-- One question per figure, plus at most one on testing: 3-5 total. Medium difficulty — real understanding, not gotchas.
-- Each distractor must be wrong for a reason the page states, so the explanation can point at it.
-- One `AskUserQuestion` call per question. After each answer, say whether it was correct and why the tempting wrong options are wrong. Randomize the correct answer's position.
-- If the user shows a question was unfair, drop it from the score and say so.
-- End with a score and which figures to re-read.
