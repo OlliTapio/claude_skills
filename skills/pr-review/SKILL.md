@@ -13,7 +13,9 @@ Use the PR number/URL if given; else `gh pr view` on the current branch. Fetch t
 
 ## 1b. Stray files
 
-Scan the changed-file list for files that must not ship: dependency dirs (`node_modules/`, `vendor/`, `.venv/`), build output (`dist/`, `build/`, `*.pyc`), local scratch (`tmp*`, `scratch*`, `*.log`, ad-hoc run scripts), editor/OS junk (`.DS_Store`, `.idea/`), env and credential files. Report each as P0; the fix is `git rm --cached <path>` plus a `.gitignore` entry.
+Scan the changed-file list for files that must not ship: dependency dirs (`node_modules/`, `vendor/`, `.venv/`), build output (`dist/`, `build/`, `*.pyc`), local scratch (`tmp*`, `scratch*`, `*.log`, ad-hoc run scripts), editor/OS junk (`.DS_Store`, `.idea/`), env and credential files.
+
+Exclude them from the diff and file list handed to the agents — never spend review on generated or vendored code. Report each as P0: name the file, the fix (`git rm --cached <path>` plus a `.gitignore` entry matching the pattern), and how to stop it recurring (global ignore for editor/OS junk, staging named files instead of `git add .`, a pre-commit hook for a repeating class).
 
 ## 2. Three focused reviews
 

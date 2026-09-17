@@ -7,10 +7,6 @@ description: Create a PR, review it, fix issues, and auto-merge squash. Use when
 
 Create PR → review → fix → squash merge.
 
-## Step 0: Drop stray files
-
-List the files the branch adds against the default branch. Remove anything that must not ship — dependency dirs (`node_modules/`, `vendor/`, `.venv/`), build output (`dist/`, `build/`, `*.pyc`), local scratch (`tmp*`, `scratch*`, `*.log`, ad-hoc run scripts), editor/OS junk (`.DS_Store`, `.idea/`), env and credential files — with `git rm --cached` plus a `.gitignore` entry. Ask before removing anything whose purpose is unclear.
-
 ## Step 1: Create PR
 
 Run the `pr` skill. Skip asking for reviewers.
