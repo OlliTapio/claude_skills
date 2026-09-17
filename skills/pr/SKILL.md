@@ -13,7 +13,7 @@ Create a pull request with comprehensive quality checks and analysis.
 
 List the files the branch adds against the default branch, plus untracked files. Flag anything that must not ship: dependency dirs (`node_modules/`, `vendor/`, `.venv/`), build output (`dist/`, `build/`, `*.pyc`), local scratch (`tmp*`, `scratch*`, `*.log`, ad-hoc run scripts), editor/OS junk (`.DS_Store`, `.idea/`), env and credential files.
 
-If any are found, tell the user which files and why, then remove with `git rm --cached <path>` and add a `.gitignore` entry matching the pattern, not just that path. Ask before removing anything whose purpose is unclear. Also name the recurrence fix: a global ignore for editor/OS junk (`git config --global core.excludesfile`), staging named files instead of `git add .`, or a pre-commit hook when the same class keeps coming back.
+If any are found, tell the user which and why, then `git rm --cached <path>` and add a `.gitignore` entry matching the pattern, not just that path. Ask first when a file's purpose is unclear. Name the recurrence fix too: a global ignore for editor/OS junk (`core.excludesfile`), staging named files instead of `git add .`, or a pre-commit hook when the same class keeps coming back.
 
 ### Step 1: Merge default branch into current branch
 
