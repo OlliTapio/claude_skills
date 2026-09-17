@@ -23,7 +23,7 @@ Spawn **three Agents in parallel** (single message), each with a fresh context a
 
 **Agent 1 — Security & breaking changes:**
 - Security: injection, XSS, SSRF, auth bypass, secrets, path traversal
-- Files that shouldn't be in git: env/credential files, keys, certs, tokens, DB dumps, customer data, dependency dirs, build output — check every commit on the branch, not just the head tree, and say whether the secret needs rotating and history rewriting
+- Secrets in git: env/credential files, keys, certs, tokens, DB dumps, customer data — scan every commit on the branch, not just the head tree; a squash merge hides them from main but GitHub keeps PR commits fetchable forever, so say whether the secret needs rotating
 - Breaking changes: API contracts, removed exports, signature/response-shape changes
 - Data loss: unsafe deletes, missing transactions/safeguards
 - Async correctness: races, missing `await`, shared mutable state
