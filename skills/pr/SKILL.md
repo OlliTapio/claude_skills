@@ -49,6 +49,14 @@ Check the diff against every guideline in `.claude/rules/` and `docs/review.md` 
 
 Flag unrelated features or significant unrelated work that should be in a separate PR. Small incidental fixes are acceptable.
 
+### Step 3d: Drop stray files
+
+From the changed-file list plus untracked files, flag dependency dirs (`node_modules/`, `.venv/`), build output (`dist/`, `build/`, `*.pyc`), local scratch (`tmp*`, `scratch*`, `*.log`, ad-hoc run scripts) and editor/OS junk (`.DS_Store`, `.idea/`). Exempt a dependency or build path whose directory already has tracked files on the default branch; scratch and junk get no exemption.
+
+Tell the user what you found. Untrack tracked files with `git rm --cached <path>`; untracked ones need only a `.gitignore` entry. Match the pattern, not just that path. Ask first when a file's purpose is unclear, and suggest a global ignore or pre-commit hook when the same class keeps coming back.
+
+Env files, keys, certs and tokens are not this case: `git rm --cached` does not unpublish a secret already pushed. Report it and tell the user to rotate it.
+
 ### Step 4: Commit if needed
 
 If there are uncommitted changes, stage specific files (not `git add .`) and commit:

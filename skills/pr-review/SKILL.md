@@ -9,7 +9,13 @@ Prioritize real defects over style noise. Favor precision over volume — only f
 
 ## 1. Get the PR and guidelines
 
-Use the PR number/URL if given; else `gh pr view` on the current branch. Fetch the diff and changed-file list. Read `.claude/rules/` and `docs/review.md` if present — **paste their content into both agent prompts** so each bot enforces the rules on its own beat. A guideline violation is always P0.
+Use the PR number/URL if given; else `gh pr view` on the current branch. Fetch the diff and changed-file list. Read `.claude/rules/` and `docs/review.md` if present — **paste their content into all three agent prompts** so each bot enforces the rules on its own beat. A guideline violation is always P0.
+
+## 1b. Stray files
+
+Scan the changed-file list for dependency dirs (`node_modules/`, `.venv/`), build output (`dist/`, `build/`, `*.pyc`), local scratch (`tmp*`, `scratch*`, `*.log`, ad-hoc run scripts) and editor/OS junk (`.DS_Store`, `.idea/`). Exempt a dependency or build path whose directory already has tracked files on the default branch; scratch and junk get no exemption.
+
+Exclude what's left from the diff and file list handed to the agents, and report each as P1: the file and the fix (`git rm --cached <path>` plus a `.gitignore` entry matching the pattern, not just that path). Env and credential files stay in the diff — Agent 1 judges those.
 
 ## 2. Three focused reviews
 
@@ -17,6 +23,7 @@ Spawn **three Agents in parallel** (single message), each with a fresh context a
 
 **Agent 1 — Security & breaking changes:**
 - Security: injection, XSS, SSRF, auth bypass, secrets, path traversal
+- Secrets in git: env/credential files, keys, certs, tokens, DB dumps, customer data — scan every commit on the branch, not just the head tree; a squash merge hides them from main but GitHub keeps PR commits fetchable forever, so say whether the secret needs rotating
 - Breaking changes: API contracts, removed exports, signature/response-shape changes
 - Data loss: unsafe deletes, missing transactions/safeguards
 - Async correctness: races, missing `await`, shared mutable state
@@ -41,7 +48,7 @@ Find claims the change *rests on* that nothing proves. Per claim: if it were fal
 
 Verify what's readable (dependency source, installed packages, schemas) instead of listing manual to-dos. Report the claim, what breaks if wrong, whether any test can falsify it, and the cheapest test that would. Skip claims nothing depends on.
 
-**All bots:** read entire changed files, not just hunks. Return each finding as file + line + concrete fix + confidence (high/med/low); mark assumptions. Skip style nits unless they hide correctness risk. Assign severity per finding by impact (§3) — a bot's beat decides *what* it hunts, not how severe each hit is; either bot can report any severity.
+**All bots:** read entire changed files, not just hunks. Return each finding as file + line + concrete fix + confidence (high/med/low); mark assumptions. Skip style nits unless they hide correctness risk. Assign severity per finding by impact (§3) — a bot's beat decides *what* it hunts, not how severe each hit is; any bot can report any severity.
 
 ## 3. Severity (per finding, by impact)
 
