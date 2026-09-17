@@ -9,13 +9,13 @@ Prioritize real defects over style noise. Favor precision over volume — only f
 
 ## 1. Get the PR and guidelines
 
-Use the PR number/URL if given; else `gh pr view` on the current branch. Fetch the diff and changed-file list. Read `.claude/rules/` and `docs/review.md` if present — **paste their content into both agent prompts** so each bot enforces the rules on its own beat. A guideline violation is always P0.
+Use the PR number/URL if given; else `gh pr view` on the current branch. Fetch the diff and changed-file list. Read `.claude/rules/` and `docs/review.md` if present — **paste their content into all three agent prompts** so each bot enforces the rules on its own beat. A guideline violation is always P0.
 
 ## 1b. Stray files
 
-Scan the changed-file list for files that must not ship: dependency dirs (`node_modules/`, `vendor/`, `.venv/`), build output (`dist/`, `build/`, `*.pyc`), local scratch (`tmp*`, `scratch*`, `*.log`, ad-hoc run scripts), editor/OS junk (`.DS_Store`, `.idea/`), env and credential files.
+Scan the changed-file list for noise that must not ship: dependency dirs (`node_modules/`, `.venv/`), build output (`dist/`, `build/`, `*.pyc`), local scratch (`tmp*`, `scratch*`, `*.log`, ad-hoc run scripts), editor/OS junk (`.DS_Store`, `.idea/`). Skip any path whose directory already has tracked files on the default branch — that repo commits it deliberately.
 
-Exclude them from the diff and file list handed to the agents. Report each as P0: the file, the fix (`git rm --cached <path>` plus a `.gitignore` entry matching the pattern, not just that path), and how to stop it recurring (global ignore for editor/OS junk, staging named files instead of `git add .`, a pre-commit hook for a repeating class).
+Exclude what's left from the diff and file list handed to the agents, and report each as P0: the file and the fix (`git rm --cached <path>` plus a `.gitignore` entry matching the pattern, not just that path). Env and credential files stay in the diff — Agent 1 judges those.
 
 ## 2. Three focused reviews
 
@@ -48,7 +48,7 @@ Find claims the change *rests on* that nothing proves. Per claim: if it were fal
 
 Verify what's readable (dependency source, installed packages, schemas) instead of listing manual to-dos. Report the claim, what breaks if wrong, whether any test can falsify it, and the cheapest test that would. Skip claims nothing depends on.
 
-**All bots:** read entire changed files, not just hunks. Return each finding as file + line + concrete fix + confidence (high/med/low); mark assumptions. Skip style nits unless they hide correctness risk. Assign severity per finding by impact (§3) — a bot's beat decides *what* it hunts, not how severe each hit is; either bot can report any severity.
+**All bots:** read entire changed files, not just hunks. Return each finding as file + line + concrete fix + confidence (high/med/low); mark assumptions. Skip style nits unless they hide correctness risk. Assign severity per finding by impact (§3) — a bot's beat decides *what* it hunts, not how severe each hit is; any bot can report any severity.
 
 ## 3. Severity (per finding, by impact)
 

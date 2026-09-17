@@ -9,12 +9,6 @@ Create a pull request with comprehensive quality checks and analysis.
 
 ## Process
 
-### Step 0: Drop stray files
-
-List the files the branch adds against the default branch, plus untracked files. Flag anything that must not ship: dependency dirs (`node_modules/`, `vendor/`, `.venv/`), build output (`dist/`, `build/`, `*.pyc`), local scratch (`tmp*`, `scratch*`, `*.log`, ad-hoc run scripts), editor/OS junk (`.DS_Store`, `.idea/`), env and credential files.
-
-If any are found, tell the user which and why, then `git rm --cached <path>` and add a `.gitignore` entry matching the pattern, not just that path. Ask first when a file's purpose is unclear. Name the recurrence fix too: a global ignore for editor/OS junk (`core.excludesfile`), staging named files instead of `git add .`, or a pre-commit hook when the same class keeps coming back.
-
 ### Step 1: Merge default branch into current branch
 
 Detect the default branch and merge:
@@ -54,6 +48,14 @@ Check the diff against every guideline in `.claude/rules/` and `docs/review.md` 
 ### Step 3c: Verify only relevant changes
 
 Flag unrelated features or significant unrelated work that should be in a separate PR. Small incidental fixes are acceptable.
+
+### Step 3d: Drop stray files
+
+From the changed-file list plus untracked files, flag what must not ship: dependency dirs (`node_modules/`, `.venv/`), build output (`dist/`, `build/`, `*.pyc`), local scratch (`tmp*`, `scratch*`, `*.log`, ad-hoc run scripts), editor/OS junk (`.DS_Store`, `.idea/`). Skip any path whose directory already has tracked files on the default branch — that repo commits it deliberately.
+
+Tell the user what you found. Untrack tracked files with `git rm --cached <path>`; for untracked ones a `.gitignore` entry is the whole fix. Match the pattern, not just that path. Ask first when a file's purpose is unclear. Name the recurrence fix too: a global ignore for editor/OS junk (`core.excludesfile`), staging named files instead of `git add .`, or a pre-commit hook when the same class keeps coming back.
+
+Env files, keys, certs and tokens are not this case: `git rm --cached` does not unpublish a secret already pushed. Report it and tell the user to rotate it.
 
 ### Step 4: Commit if needed
 
