@@ -51,9 +51,9 @@ Flag unrelated features or significant unrelated work that should be in a separa
 
 ### Step 3d: Drop stray files
 
-From the changed-file list plus untracked files, flag what must not ship: dependency dirs (`node_modules/`, `.venv/`), build output (`dist/`, `build/`, `*.pyc`), local scratch (`tmp*`, `scratch*`, `*.log`, ad-hoc run scripts), editor/OS junk (`.DS_Store`, `.idea/`). Skip any path whose directory already has tracked files on the default branch — that repo commits it deliberately.
+From the changed-file list plus untracked files, flag dependency dirs (`node_modules/`, `.venv/`), build output (`dist/`, `build/`, `*.pyc`), local scratch (`tmp*`, `scratch*`, `*.log`, ad-hoc run scripts) and editor/OS junk (`.DS_Store`, `.idea/`). Exempt a dependency or build path whose directory already has tracked files on the default branch; scratch and junk get no exemption.
 
-Tell the user what you found. Untrack tracked files with `git rm --cached <path>`; for untracked ones a `.gitignore` entry is the whole fix. Match the pattern, not just that path. Ask first when a file's purpose is unclear. Name the recurrence fix too: a global ignore for editor/OS junk (`core.excludesfile`), staging named files instead of `git add .`, or a pre-commit hook when the same class keeps coming back.
+Tell the user what you found. Untrack tracked files with `git rm --cached <path>`; untracked ones need only a `.gitignore` entry. Match the pattern, not just that path. Ask first when a file's purpose is unclear, and suggest a global ignore or pre-commit hook when the same class keeps coming back.
 
 Env files, keys, certs and tokens are not this case: `git rm --cached` does not unpublish a secret already pushed. Report it and tell the user to rotate it.
 

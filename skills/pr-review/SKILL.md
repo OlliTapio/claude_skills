@@ -13,9 +13,9 @@ Use the PR number/URL if given; else `gh pr view` on the current branch. Fetch t
 
 ## 1b. Stray files
 
-Scan the changed-file list for noise that must not ship: dependency dirs (`node_modules/`, `.venv/`), build output (`dist/`, `build/`, `*.pyc`), local scratch (`tmp*`, `scratch*`, `*.log`, ad-hoc run scripts), editor/OS junk (`.DS_Store`, `.idea/`). Skip any path whose directory already has tracked files on the default branch — that repo commits it deliberately.
+Scan the changed-file list for dependency dirs (`node_modules/`, `.venv/`), build output (`dist/`, `build/`, `*.pyc`), local scratch (`tmp*`, `scratch*`, `*.log`, ad-hoc run scripts) and editor/OS junk (`.DS_Store`, `.idea/`). Exempt a dependency or build path whose directory already has tracked files on the default branch; scratch and junk get no exemption.
 
-Exclude what's left from the diff and file list handed to the agents, and report each as P0: the file and the fix (`git rm --cached <path>` plus a `.gitignore` entry matching the pattern, not just that path). Env and credential files stay in the diff — Agent 1 judges those.
+Exclude what's left from the diff and file list handed to the agents, and report each as P1: the file and the fix (`git rm --cached <path>` plus a `.gitignore` entry matching the pattern, not just that path). Env and credential files stay in the diff — Agent 1 judges those.
 
 ## 2. Three focused reviews
 
