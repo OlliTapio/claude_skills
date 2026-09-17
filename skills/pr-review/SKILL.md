@@ -11,6 +11,10 @@ Prioritize real defects over style noise. Favor precision over volume — only f
 
 Use the PR number/URL if given; else `gh pr view` on the current branch. Fetch the diff and changed-file list. Read `.claude/rules/` and `docs/review.md` if present — **paste their content into both agent prompts** so each bot enforces the rules on its own beat. A guideline violation is always P0.
 
+## 1b. Stray files
+
+Scan the changed-file list for files that must not ship: dependency dirs (`node_modules/`, `vendor/`, `.venv/`), build output (`dist/`, `build/`, `*.pyc`), local scratch (`tmp*`, `scratch*`, `*.log`, ad-hoc run scripts), editor/OS junk (`.DS_Store`, `.idea/`), env and credential files. Report each as P0; the fix is `git rm --cached <path>` plus a `.gitignore` entry.
+
 ## 2. Three focused reviews
 
 Spawn **three Agents in parallel** (single message), each with a fresh context and **only its own brief** — never another's. Fall back to sequential if Agents are unavailable.
