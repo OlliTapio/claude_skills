@@ -9,7 +9,11 @@ Create PR → review → fix → squash merge.
 
 ## Step 1: Create PR
 
-Run the `pr` skill. Skip asking for reviewers.
+Run the `pr` skill. Never add or ask for reviewers.
+
+If `gh pr view --json reviewDecision -q .reviewDecision` returns `REVIEW_REQUIRED`,
+stop after Step 3: report the PR URL and that it needs the user's manual review.
+Do not request a review from anyone, and do not merge.
 
 ## Step 2: Review PR
 

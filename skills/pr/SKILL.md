@@ -1,6 +1,6 @@
 ---
 name: pr
-description: Create a pull request with full quality checks. Use when asked to create a PR, submit changes for review, or prepare code for merging. Runs tests, linting, type checking, analyzes async/blocking code, identifies performance bottlenecks, commits with concise messages, creates PR with bullet summary, and asks for reviewers.
+description: Create a pull request with full quality checks. Use when asked to create a PR, submit changes for review, or prepare code for merging. Runs tests, linting, type checking, analyzes async/blocking code, identifies performance bottlenecks, commits with concise messages, creates PR with bullet summary, and holds reviewer requests until the user has reviewed.
 ---
 
 # Pull Request Creation Skill
@@ -120,9 +120,19 @@ flowchart LR
 ```
 ````
 
-### Step 7: Ask for reviewers
+### Step 7: Reviewers
 
-Ask the user who should review, then add them:
+Check whether the base branch requires an approving review:
+
+```bash
+gh pr view --json reviewDecision -q .reviewDecision
+```
+
+`REVIEW_REQUIRED` means a review gates the merge. In that case do NOT add reviewers.
+Report the PR URL and stop. The user reviews the work manually first, then adds
+reviewers or tells you to.
+
+Otherwise, ask the user who should review, then add them:
 
 ```bash
 gh pr edit --add-reviewer username1,username2
