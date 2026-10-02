@@ -61,7 +61,8 @@ Env files, keys, certs and tokens are not this case: `git rm --cached` does not 
 
 If the diff touches user-visible UI, use the `run` skill to shoot the changed view. For an altered view, shoot the same view at the same viewport on a default-branch worktree too.
 
-Host on a `pr-assets` branch via a throwaway worktree, then link `https://raw.githubusercontent.com/<owner>/<repo>/pr-assets/<file>.png`. Private repos don't render raw URLs — hand over the local paths to drag in instead.
+Commit the PNGs on the branch under `docs/<topic>/` and link them at the commit sha:
+`https://github.com/<owner>/<repo>/blob/<sha>/<path>?raw=1` — this renders in private repos; `raw.githubusercontent.com` does not. Say once what the screenshots show (environment, viewport, role), then caption each.
 
 ### Step 4: Commit if needed
 
