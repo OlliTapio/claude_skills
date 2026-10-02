@@ -129,8 +129,8 @@ gh pr view --json reviewDecision -q .reviewDecision
 ```
 
 `REVIEW_REQUIRED` means a review gates the merge. In that case do NOT add reviewers.
-Report the PR URL and stop. The user reviews the work manually first, then adds
-reviewers or tells you to.
+Report the PR URL and stop. Once the user says their manual review is done, ask who
+should review and add them.
 
 Otherwise, ask the user who should review, then add them:
 
