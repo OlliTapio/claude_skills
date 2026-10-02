@@ -59,10 +59,9 @@ Env files, keys, certs and tokens are not this case: `git rm --cached` does not 
 
 ### Step 3e: Screenshot UI changes
 
-If the diff touches user-visible UI, use the `run` skill to shoot the changed view. For an altered view, shoot the same view at the same viewport on a default-branch worktree too.
+If the diff touches user-visible UI, use the `run` skill to shoot the changed view into the scratchpad. For an altered view, shoot the same view at the same viewport on a default-branch worktree too.
 
-Commit the PNGs on the branch under `docs/<topic>/` and link them at the commit sha:
-`https://github.com/<owner>/<repo>/blob/<sha>/<path>?raw=1` — this renders in private repos; `raw.githubusercontent.com` does not. Say once what the screenshots show (environment, viewport, role), then caption each.
+Never commit screenshots. Attach them at PR creation with `--attach <path>#<alt text>` (gh >= 2.99): a body that references the local path gets it rewritten in place, anything unreferenced is appended.
 
 ### Step 4: Commit if needed
 
@@ -84,7 +83,10 @@ git push -u origin "$(git branch --show-current)"
 Write the body to answer four questions, each kept short:
 
 ```bash
-gh pr create --base "$DEFAULT_BRANCH" --title "Descriptive PR title" --body "$(cat <<'EOF'
+gh pr create --base "$DEFAULT_BRANCH" --title "Descriptive PR title" \
+  --attach "/abs/path/before.png#Settings page, before" \
+  --attach "/abs/path/after.png#Settings page, after" \
+  --body "$(cat <<'EOF'
 ## Why
 [The problem or goal. 1-2 sentences.]
 
@@ -95,7 +97,7 @@ gh pr create --base "$DEFAULT_BRANCH" --title "Descriptive PR title" --body "$(c
 ## Screenshots
 | Before | After |
 | --- | --- |
-| ![before](<url>) | ![after](<url>) |
+| ![before](/abs/path/before.png) | ![after](/abs/path/after.png) |
 
 ## Implications
 - [Breaking changes, migrations, performance/async effects, follow-ups. Omit if none.]
