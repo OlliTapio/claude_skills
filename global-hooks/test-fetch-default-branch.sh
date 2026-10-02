@@ -240,6 +240,148 @@ got=$(git -C "$TMP/nopy-consumer" log -1 --format=%s origin/main 2>/dev/null)
 [ "$got" = "NEW" ] && ok "awk fallback parses cwd when python3 is unavailable" \
                    || bad "awk fallback parses cwd when python3 is unavailable" "origin/main=$got"
 
+# The extractor is shared, so hook_event_name goes through the same fallback --
+# and a mis-parsed event silently turns the stale-HEAD report off.
+mkrepo nopyev main
+git -C "$TMP/nopyev-consumer" checkout -q -b feat
+out=$(PATH="$TMP/nopy:$PATH" sh -c \
+  "printf '%s' '{\"cwd\":\"$TMP/nopyev-consumer\",\"hook_event_name\":\"SessionStart\"}' | '$HOOK'" \
+  2>/dev/null)
+case "$out" in
+  *"behind origin/main"*) ok "awk fallback parses hook_event_name too" ;;
+  *) bad "awk fallback parses hook_event_name too" "out=[$out]" ;;
+esac
+
+echo
+echo "== rebase a Claude-cut worktree onto the fresh default =="
+
+# A consumer clone plus a worktree where Claude Code puts them. The worktree
+# branch is cut from the STALE main, then main moves -- the exact shape of the
+# bug: born from a base that was already behind.
+mkwt() {  # mkwt <name> [--outside]
+  mkrepo "$1" main
+  _c="$TMP/$1-consumer"
+  case "$2" in
+    --outside) _w="$TMP/$1-elsewhere" ;;
+    --sibling) _w="$TMP/$1-consumer-worktree-wt" ;;
+    *) _w="$_c/.claude/worktrees/wt"; mkdir -p "$_c/.claude/worktrees" ;;
+  esac
+  git -C "$_c" worktree add -q -b feat "$_w" HEAD 2>/dev/null
+  printf 'mine\n' > "$_w/mine.txt"
+  git -C "$_w" add mine.txt
+  git -C "$_w" -c user.email=t@t -c user.name=t commit -q -m MINE
+  WT=$_w
+}
+
+mkwt reb
+printf '%s' "{\"cwd\":\"$WT\"}" | "$HOOK" >/dev/null 2>&1
+# The worktree's own commit must survive, replayed on top of the new main.
+subj=$(git -C "$WT" log --format=%s -3 | tr '\n' ',')
+[ "$subj" = "MINE,NEW,first," ] \
+  && ok "replays the worktree's commits onto the fetched default" \
+  || bad "replays the worktree's commits onto the fetched default" "log=$subj"
+st=$(git -C "$WT" status --porcelain 2>/dev/null)
+[ -z "$st" ] && ok "rebase leaves the worktree clean" \
+             || bad "rebase leaves the worktree clean" "status: $st"
+[ -f "$WT/mine.txt" ] && ok "rebase keeps the worktree's files" \
+                      || bad "rebase keeps the worktree's files" "mine.txt gone"
+
+# Dirty worktree: the guard must refuse before touching history.
+mkwt wtdirty
+printf 'wip\n' >> "$WT/mine.txt"
+printf '%s' "{\"cwd\":\"$WT\"}" | "$HOOK" >/dev/null 2>&1
+subj=$(git -C "$WT" log -1 --format=%s)
+[ "$subj" = "MINE" ] && [ -n "$(git -C "$WT" status --porcelain)" ] \
+  && ok "skips a worktree with uncommitted work" \
+  || bad "skips a worktree with uncommitted work" "HEAD=$subj"
+
+# The sibling layout `<repo>-worktree-<name>` that older builds produce must be
+# recognised too -- matching only .claude/worktrees/ silently disabled this half
+# on a machine that uses the sibling layout.
+mkwt sib --sibling
+printf '%s' "{\"cwd\":\"$WT\"}" | "$HOOK" >/dev/null 2>&1
+subj=$(git -C "$WT" log --format=%s -3 | tr '\n' ',')
+[ "$subj" = "MINE,NEW,first," ] \
+  && ok "recognises the sibling <repo>-worktree-<name> layout" \
+  || bad "recognises the sibling <repo>-worktree-<name> layout" "log=$subj"
+
+# A worktree a human added by hand is not ours to rewrite.
+mkwt outside --outside
+printf '%s' "{\"cwd\":\"$WT\"}" | "$HOOK" >/dev/null 2>&1
+subj=$(git -C "$WT" log -1 --format=%s)
+base=$(git -C "$WT" log -2 --format=%s | tail -1)
+[ "$base" = "first" ] && ok "leaves a worktree outside .claude/worktrees alone" \
+                      || bad "leaves a worktree outside .claude/worktrees alone" "parent=$base"
+
+# The primary checkout is never rebased, even on a stale feature branch --
+# that is the human's working copy.
+mkrepo prim main
+git -C "$TMP/prim-consumer" checkout -q -b feat
+git -C "$TMP/prim-consumer" -c user.email=t@t -c user.name=t \
+    commit -q --allow-empty -m MINE
+printf '%s' "{\"cwd\":\"$TMP/prim-consumer\"}" | "$HOOK" >/dev/null 2>&1
+base=$(git -C "$TMP/prim-consumer" log -2 --format=%s | tail -1)
+[ "$base" = "first" ] && ok "never rebases a branch in the primary checkout" \
+                      || bad "never rebases a branch in the primary checkout" "parent=$base"
+
+# A conflicting rebase must leave the worktree byte-identical, never half-done.
+mkrepo conf main
+printf 'upstream\n' > "$TMP/conf-work/clash.txt"
+git -C "$TMP/conf-work" add clash.txt
+git -C "$TMP/conf-work" -c user.email=t@t -c user.name=t commit -q -m UPSTREAM
+git -C "$TMP/conf-work" push -q origin main
+_c="$TMP/conf-consumer"; mkdir -p "$_c/.claude/worktrees"
+git -C "$_c" worktree add -q -b feat "$_c/.claude/worktrees/wt" HEAD 2>/dev/null
+printf 'mine\n' > "$_c/.claude/worktrees/wt/clash.txt"
+git -C "$_c/.claude/worktrees/wt" add clash.txt
+git -C "$_c/.claude/worktrees/wt" -c user.email=t@t -c user.name=t commit -q -m MINE
+before=$(git -C "$_c/.claude/worktrees/wt" rev-parse HEAD)
+printf '%s' "{\"cwd\":\"$_c/.claude/worktrees/wt\"}" | "$HOOK" >/dev/null 2>&1
+after=$(git -C "$_c/.claude/worktrees/wt" rev-parse HEAD)
+gd=$(git -C "$_c/.claude/worktrees/wt" rev-parse --absolute-git-dir)
+[ "$before" = "$after" ] && [ ! -e "$gd/rebase-merge" ] && [ ! -e "$gd/rebase-apply" ] \
+  && ok "aborts a conflicting rebase and leaves no in-progress state" \
+  || bad "aborts a conflicting rebase and leaves no in-progress state" "HEAD moved or rebase left mid-flight"
+
+# Opt-out.
+mkwt optreb
+CLAUDE_HOOK_REBASE_WORKTREE=0 sh -c \
+  "printf '%s' '{\"cwd\":\"$WT\"}' | '$HOOK'" >/dev/null 2>&1
+base=$(git -C "$WT" log -2 --format=%s | tail -1)
+[ "$base" = "first" ] && ok "CLAUDE_HOOK_REBASE_WORKTREE=0 disables the rebase" \
+                      || bad "CLAUDE_HOOK_REBASE_WORKTREE=0 disables the rebase" "parent=$base"
+
+echo
+echo "== report a stale HEAD the hook must not move =="
+
+# The primary-checkout case that started all this: agent must be told.
+mkrepo rep main
+git -C "$TMP/rep-consumer" checkout -q -b feat
+out=$(printf '%s' "{\"cwd\":\"$TMP/rep-consumer\",\"hook_event_name\":\"SessionStart\"}" \
+      | "$HOOK" 2>/dev/null)
+case "$out" in
+  *"feat is 1 commit(s) behind origin/main"*)
+    ok "SessionStart reports how far behind HEAD is" ;;
+  *) bad "SessionStart reports how far behind HEAD is" "out=[$out]" ;;
+esac
+
+# PreToolUse stdout is transcript noise, not context -- stay quiet there.
+mkrepo repq main
+git -C "$TMP/repq-consumer" checkout -q -b feat
+out=$(printf '%s' "{\"cwd\":\"$TMP/repq-consumer\",\"hook_event_name\":\"PreToolUse\"}" \
+      | "$HOOK" 2>/dev/null)
+[ -z "$out" ] && ok "stays silent on PreToolUse" \
+              || bad "stays silent on PreToolUse" "out=[$out]"
+
+# Nothing to say when the branch already contains origin/main.
+mkrepo repu main
+git -C "$TMP/repu-consumer" fetch -q origin main
+git -C "$TMP/repu-consumer" checkout -q -B feat origin/main
+out=$(printf '%s' "{\"cwd\":\"$TMP/repu-consumer\",\"hook_event_name\":\"SessionStart\"}" \
+      | "$HOOK" 2>/dev/null)
+[ -z "$out" ] && ok "stays silent when HEAD is up to date" \
+              || bad "stays silent when HEAD is up to date" "out=[$out]"
+
 echo
 [ "$fail" -eq 0 ] && echo "ALL PASS" || echo "FAILURES"
 exit $fail

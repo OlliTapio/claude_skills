@@ -74,6 +74,82 @@ as the `pull --ff-only` a human would have run.
 Set `CLAUDE_HOOK_FF_LOCAL_DEFAULT=0` to disable the local half and keep the
 original refs/remotes-only behaviour.
 
+### The third problem: a worktree is only as fresh as the day it was cut
+
+`fresh` resolves `origin/<db>` at **creation time** and nothing refreshes the
+worktree afterwards. A worktree cut 20 seconds after a successful fetch --
+provably current at birth -- was 21 days and 4 commits behind by the time a
+session resumed in it.
+
+So on the way *in*, the hook rebases the worktree's branch onto the default it
+just fetched. Rebase rather than merge: these are short-lived agent branches,
+and a linear history keeps `git diff <db>...HEAD` meaning "what this worktree
+did". It runs only when all of these hold:
+
+- the checkout is a **linked worktree**, not the primary one (`--absolute-git-dir`
+  differs from `--git-common-dir`);
+- it matches a **Claude Code worktree layout** — either the documented
+  `<repo>/.claude/worktrees/<name>` or the sibling `<repo>-worktree-<name>` that
+  older builds produce. This is an allowlist: a worktree a human added by hand
+  is their workspace, not ours to rewrite. Both layouts are checked because
+  matching only the first silently disables this half on a machine that uses the
+  second — which is how the gap was found, with `.claude/worktrees/` sitting
+  empty while the live worktree was a sibling directory;
+- HEAD is on a **named branch** that is not the default one;
+- the branch does not already contain `origin/<db>`;
+- the worktree is **clean and idle**, by the same checks the fast-forward uses.
+
+The rebase targets the **SHA**, never the ref name: given a remote-tracking ref,
+`git rebase` can engage its `--fork-point` heuristic and silently drop commits
+it believes were already upstream.
+
+Any failure — conflict, missing committer identity, anything — triggers
+`git rebase --abort`, so the worktree is left byte-identical to how it was
+found. A half-rebased worktree, with the agent sitting in a detached conflicted
+tree, is far worse than a stale one.
+
+Set `CLAUDE_HOOK_REBASE_WORKTREE=0` to disable.
+
+> **This rewrites history.** If the branch was already pushed, the next push
+> needs `--force-with-lease`. That is normal for a pre-merge feature branch, but
+> it is a real consequence — the opt-out above exists for people who do not want
+> it.
+
+### The fourth problem: the branch that is stale is often not in a worktree
+
+The case that prompted all of the above was not a worktree at all:
+
+```
+11:01  git checkout -b fix/... from local main   ← main was 4 commits stale
+12:55  commit
+13:02  (hook) fast-forwards local main           ← two hours too late
+```
+
+The branch was cut in the **primary checkout** from a `main` that had been
+behind since the previous week, and the hook's fast-forward arrived after the
+fact. An agent then ran `ls .github/workflows`, found nothing, and reported the
+repo had no CI. The workflow had been on `main` for nine days.
+
+Rewriting a human's own working copy to fix that is not on the table. But
+letting an agent read that tree believing it is current is exactly the failure
+mode, so the hook **says so instead**:
+
+```
+fix/byo-telnyx-origination is 4 commit(s) behind origin/main (769bed0).
+Files in this working tree do not reflect origin/main -- check
+`git log origin/main` or `git ls-tree origin/main` before concluding
+anything is absent from the repo.
+```
+
+stdout from a `SessionStart` hook is injected as session context, which is
+precisely the right audience. It is emitted only for `SessionStart` and
+`SubagentStart` — a `PreToolUse` hook's stdout is transcript noise, and that
+registration fires before the worktree exists anyway. It stays silent when HEAD
+already contains `origin/<db>`.
+
+This half is a **report, not a repair**: it fires for the primary checkout and
+for any worktree whose rebase was skipped or aborted.
+
 ### How it's wired
 
 Three registrations, because three different paths create worktrees:
@@ -97,7 +173,11 @@ exists. The other two are opportunistic.
 5. Fetches **only** that one branch into `refs/remotes/origin/<db>`.
 6. Fast-forwards `refs/heads/<db>` if — and only if — every condition above
    holds; otherwise leaves it untouched.
-7. Exits `0` no matter what.
+7. Rebases the current worktree's branch onto the fetched default, if that
+   worktree is Claude-cut, clean and idle; aborts on any failure.
+8. Prints how far behind `origin/<db>` HEAD is, when it could not be moved and
+   the event is one whose stdout becomes context.
+9. Exits `0` no matter what.
 
 ### Design constraints
 
@@ -138,6 +218,10 @@ make things worse than not having it:
 Only `2` blocks a `PreToolUse` call. Any other non-zero is logged but does not
 block. This script only ever returns `0` — it is deliberately incapable of
 blocking a worktree.
+
+It writes to stdout only for `SessionStart` / `SubagentStart`, and only to
+report a stale HEAD. `PreToolUse` — the one blocking registration — is always
+silent.
 
 ## Install
 
