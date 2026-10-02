@@ -59,21 +59,9 @@ Env files, keys, certs and tokens are not this case: `git rm --cached` does not 
 
 ### Step 3e: Screenshot UI changes
 
-If the diff touches user-visible UI (components, templates, styles, CLI/TUI output), capture images. Use the `run` skill to launch the app, drive it to the changed view, and screenshot into the scratchpad.
+If the diff touches user-visible UI, use the `run` skill to shoot the changed view. For an altered view, shoot the same view at the same viewport on a default-branch worktree too.
 
-Capture "before" too when the change alters an existing view: `git worktree add` the default branch, run it there, shoot the same view at the same viewport. New views get "after" only.
-
-Host them on a `pr-assets` branch, in a throwaway worktree so the current tree is untouched:
-
-```bash
-git worktree add --detach "$TMP/assets" && cd "$TMP/assets"
-git switch pr-assets 2>/dev/null || git switch --orphan pr-assets && git rm -rq --cached . 2>/dev/null
-cp /path/to/shots/*.png . && git add *.png
-git commit -m "Add PR screenshots" && git push -u origin pr-assets
-cd - && git worktree remove "$TMP/assets"
-```
-
-Link `https://raw.githubusercontent.com/<owner>/<repo>/pr-assets/<file>.png`. Private repos do not render raw URLs — there, hand the user the local paths to drag into the PR body instead.
+Host on a `pr-assets` branch via a throwaway worktree, then link `https://raw.githubusercontent.com/<owner>/<repo>/pr-assets/<file>.png`. Private repos don't render raw URLs — hand over the local paths to drag in instead.
 
 ### Step 4: Commit if needed
 
