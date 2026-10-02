@@ -57,6 +57,24 @@ Tell the user what you found. Untrack tracked files with `git rm --cached <path>
 
 Env files, keys, certs and tokens are not this case: `git rm --cached` does not unpublish a secret already pushed. Report it and tell the user to rotate it.
 
+### Step 3e: Screenshot UI changes
+
+If the diff touches user-visible UI (components, templates, styles, CLI/TUI output), capture images. Use the `run` skill to launch the app, drive it to the changed view, and screenshot into the scratchpad.
+
+Capture "before" too when the change alters an existing view: `git worktree add` the default branch, run it there, shoot the same view at the same viewport. New views get "after" only.
+
+Host them on a `pr-assets` branch, in a throwaway worktree so the current tree is untouched:
+
+```bash
+git worktree add --detach "$TMP/assets" && cd "$TMP/assets"
+git switch pr-assets 2>/dev/null || git switch --orphan pr-assets && git rm -rq --cached . 2>/dev/null
+cp /path/to/shots/*.png . && git add *.png
+git commit -m "Add PR screenshots" && git push -u origin pr-assets
+cd - && git worktree remove "$TMP/assets"
+```
+
+Link `https://raw.githubusercontent.com/<owner>/<repo>/pr-assets/<file>.png`. Private repos do not render raw URLs — there, hand the user the local paths to drag into the PR body instead.
+
 ### Step 4: Commit if needed
 
 If there are uncommitted changes, stage specific files (not `git add .`) and commit:
@@ -84,6 +102,11 @@ gh pr create --base "$DEFAULT_BRANCH" --title "Descriptive PR title" --body "$(c
 ## What
 - [Change 1]
 - [Change 2]
+
+## Screenshots
+| Before | After |
+| --- | --- |
+| ![before](<url>) | ![after](<url>) |
 
 ## Implications
 - [Breaking changes, migrations, performance/async effects, follow-ups. Omit if none.]
@@ -114,4 +137,4 @@ Ask the user who should review, then add them:
 gh pr edit --add-reviewer username1,username2
 ```
 
-PR descriptions: short and skimmable. Lead with why, not just what. Draw out any architecture decision with a Mermaid diagram.
+PR descriptions: short and skimmable. Lead with why, not just what. Draw out any architecture decision with a Mermaid diagram. Omit `## Screenshots` when nothing user-visible changed; drop the Before column for new views.
