@@ -9,6 +9,10 @@ Adapted from Geoffrey Litt's `explain-diff` prompts: https://gist.github.com/geo
 
 Figures carry the mechanism; prose carries the reasoning. Read the diff and surrounding code broadly, then spend the effort on the figures — but never at the cost of leaving a decision unexplained.
 
+## Scope — the net change, never the commits
+
+Explain the PR's end state against its base: `gh pr diff <n>`, or `git diff $(git merge-base origin/<base> HEAD)` for a branch. MUST NOT explain commits one by one — a PR's commits are often iterations of the same thing, and later ones undo earlier ones. Code added then removed within the PR does not exist. Commit messages are a source of reasons only.
+
 ## Document shape — exactly this, in this order
 
 1. **Title + "In one minute"** — five bullets, ≤20 words each: what changed · why · what breaks if it's wrong · blast radius (files/systems touched) · test status. No TOC, no intro.
