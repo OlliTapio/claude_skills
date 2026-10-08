@@ -58,11 +58,17 @@ Verify what's readable (dependency source, installed packages, schemas) instead 
 
 ## 4. Fix P0/P1 and confirm
 
+Skip §4 and report P0/P1 as open if Agents are unavailable or this check fails:
+
+```bash
+[ "$(gh pr view <N> --json author -q .author.login)" = "$(gh api user -q .login)" ]
+```
+
 Reviewers and implementer MUST NOT see each other's context. Relay only finding text and commit SHAs between them.
 
-Spawn a fresh **implementer Agent**. Give it the PR branch (`gh pr checkout` in a worktree if it isn't current), the pasted guidelines, and each P0/P1 as ID + file + line + problem + suggested fix. Never pass reviewer transcripts or reasoning. It fixes each finding, runs the project's checks, commits, and returns SHA + finding IDs. It pushes only if `gh pr view --json author` is the current `gh` user; otherwise it leaves the commits local, and the report says so. P2s stay unfixed. Fix stray-file findings yourself.
+Spawn a fresh, non-fork **implementer Agent**. Give it the pasted guidelines and each P0/P1, stray files included, as ID + file + line + problem + suggested fix. Tell it: if `git worktree list` shows the PR branch checked out in a clean tree, work there; otherwise `gh pr checkout <N> --worktree <path>`. It fixes each finding, runs the project's checks, stages only files it changed, commits, pushes, removes any worktree it created, and returns SHA + finding IDs. P2s stay unfixed.
 
-Then `SendMessage` each reviewer that raised a fixed finding with only its own findings, as it reported them, and the SHA — not the implementer's explanation. It re-reads the code at that SHA and answers per finding: **confirmed** / **not fixed** (with why) / **new issue introduced**. Send rejections to the implementer as new findings; stop after 3 rounds. Confirm stray-file fixes yourself from the new file list.
+Then `SendMessage` each reviewer that raised a fixed finding with only its own findings, as it reported them, and the SHA. If a reviewer can't be messaged, spawn a fresh one with only its original brief, its findings and the SHA. It re-reads the code at that SHA and answers per finding: **confirmed** / **not fixed** (with why) / **new issue introduced**. `SendMessage` rejections to the same implementer as new findings; stop after 3 rounds. Confirm stray-file fixes yourself from the file list at the new SHA.
 
 ## 5. Report
 
