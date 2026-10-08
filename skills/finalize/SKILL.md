@@ -21,9 +21,9 @@ continue from Step 4.
 
 Run the `pr-review` skill on the created PR.
 
-## Step 3: Fix and re-review
+## Step 3: Check open findings
 
-If P0/P1 issues found: fix them, run quality checks, commit, push, re-review. Max 3 iterations. P2s are non-blocking — proceed.
+If pr-review reports any P0/P1 still open, stop: report them with the PR URL. Do not merge. P2s are non-blocking — proceed.
 
 ## Step 4: Wait for CI
 

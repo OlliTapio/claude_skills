@@ -1,6 +1,6 @@
 ---
 name: pr-review
-description: Review GitHub PRs with a fresh Claude context and produce severity-ranked findings. Use when user asks to review a PR, wants code review feedback, or needs a second opinion on PR changes. Checks for duplicate code, bugs, unclear code, DRY/SOLID violations, over-engineering, tool/library reuse opportunities, missing tests, and assumptions no test can falsify.
+description: Review GitHub PRs with a fresh Claude context and produce severity-ranked findings, auto-fixing P0/P1 and having the reviewing agents confirm each fix. Use when user asks to review a PR, wants code review feedback, or needs a second opinion on PR changes. Checks for duplicate code, bugs, unclear code, DRY/SOLID violations, over-engineering, tool/library reuse opportunities, missing tests, and assumptions no test can falsify.
 ---
 
 # PR Review
@@ -19,7 +19,7 @@ Exclude what's left from the diff and file list handed to the agents, and report
 
 ## 2. Three focused reviews
 
-Spawn **three Agents in parallel** (single message), each with a fresh context and **only its own brief** — never another's. Fall back to sequential if Agents are unavailable.
+Spawn **three Agents in parallel** (single message), each with a fresh context and **only its own brief** — never another's. Keep each agent's ID for §4. Fall back to sequential if Agents are unavailable.
 
 **Agent 1 — Security & breaking changes:**
 - Security: injection, XSS, SSRF, auth bypass, secrets, path traversal
@@ -56,10 +56,24 @@ Verify what's readable (dependency source, installed packages, schemas) instead 
 - **P1 warning** — real risk needing a trigger or specific state: correctness bugs, exploitable-only-under-conditions security gaps, missing tests for changed behavior, load-bearing unverified assumptions (especially ones the PR's own tests bake in, so they read as covered), major DRY/perf/type issues
 - **P2 suggestion** — hardening and clarity with no direct failure path: defense-in-depth, simplification, non-blocking nits
 
-## 4. Report
+## 4. Fix P0/P1 and confirm
 
-Present findings to the user sorted P0→P2, with a count per severity. If none, say so and name residual risk (e.g. missing integration tests).
+Skip §4 and report P0/P1 as open if Agents are unavailable or this check fails:
 
-## 5. Re-review
+```bash
+[ "$(gh pr view <N> --json author -q .author.login)" = "$(gh api user -q .login)" ]
+```
+
+Reviewers and implementer MUST NOT see each other's context. Relay only finding text and commit SHAs between them.
+
+Spawn a fresh, non-fork **implementer Agent**. Give it the pasted guidelines and each P0/P1, stray files included, as ID + file + line + problem + suggested fix. Tell it: if `git worktree list` shows the PR branch checked out, work there; otherwise `gh pr checkout <N> --worktree <path>`. If that tree is dirty or checkout fails, it returns that and you skip the rest of §4, reporting P0/P1 as open. It fixes each finding, runs the project's checks, stages only files it changed, commits, pushes, removes any worktree it created, and returns SHA + finding IDs. P2s stay unfixed.
+
+Then `SendMessage` each reviewer that raised a fixed finding with only its own findings, as it reported them, and the SHA. If a reviewer can't be messaged, spawn a fresh one with only its original brief, its findings and the SHA. It re-reads the code at that SHA and answers per finding: **confirmed** / **not fixed** (with why) / **new issue introduced**. `SendMessage` rejections to the same implementer as new findings; stop after 3 rounds. Confirm stray-file fixes yourself from the file list at the new SHA.
+
+## 5. Report
+
+Present findings to the user sorted P0→P2, with a count per severity. Mark each P0/P1 confirmed or still open, with the commit SHA. If none, say so and name residual risk (e.g. missing integration tests).
+
+## 6. Re-review
 
 On "fixes done", re-run on the new head, mark each prior finding resolved / open / partial, share the delta.
