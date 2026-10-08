@@ -58,9 +58,11 @@ Verify what's readable (dependency source, installed packages, schemas) instead 
 
 ## 4. Fix P0/P1 and confirm
 
-Check out the PR branch (`gh pr checkout` in a worktree if it isn't current). Fix every P0 and P1, run the project's checks, and commit. Push only if `gh pr view --json author` is the current `gh` user; otherwise leave the commits local and say so. Leave P2s unfixed.
+Reviewers and implementer MUST NOT see each other's context. Relay only finding text and commit SHAs between them.
 
-Then `SendMessage` each agent that raised a fixed finding: list its findings, the commit SHA, and what changed. Ask it to re-read the code and answer per finding: **confirmed** / **not fixed** (with why) / **new issue introduced**. Fix any rejection and ask again; stop after 3 rounds. Confirm stray-file fixes yourself from the new file list.
+Spawn a fresh **implementer Agent**. Give it the PR branch (`gh pr checkout` in a worktree if it isn't current), the pasted guidelines, and each P0/P1 as ID + file + line + problem + suggested fix. Never pass reviewer transcripts or reasoning. It fixes each finding, runs the project's checks, commits, and returns SHA + finding IDs. It pushes only if `gh pr view --json author` is the current `gh` user; otherwise it leaves the commits local, and the report says so. P2s stay unfixed. Fix stray-file findings yourself.
+
+Then `SendMessage` each reviewer that raised a fixed finding with only its own findings, as it reported them, and the SHA — not the implementer's explanation. It re-reads the code at that SHA and answers per finding: **confirmed** / **not fixed** (with why) / **new issue introduced**. Send rejections to the implementer as new findings; stop after 3 rounds. Confirm stray-file fixes yourself from the new file list.
 
 ## 5. Report
 
