@@ -1,6 +1,6 @@
 ---
 name: pr-review
-description: Review GitHub PRs with a fresh Claude context and produce severity-ranked findings. Use when user asks to review a PR, wants code review feedback, or needs a second opinion on PR changes. Checks for duplicate code, bugs, unclear code, DRY/SOLID violations, over-engineering, tool/library reuse opportunities, missing tests, and assumptions no test can falsify.
+description: Review GitHub PRs with a fresh Claude context and produce severity-ranked findings, auto-fixing P0/P1 and having the reviewing agents confirm each fix. Use when user asks to review a PR, wants code review feedback, or needs a second opinion on PR changes. Checks for duplicate code, bugs, unclear code, DRY/SOLID violations, over-engineering, tool/library reuse opportunities, missing tests, and assumptions no test can falsify.
 ---
 
 # PR Review
@@ -19,7 +19,7 @@ Exclude what's left from the diff and file list handed to the agents, and report
 
 ## 2. Three focused reviews
 
-Spawn **three Agents in parallel** (single message), each with a fresh context and **only its own brief** — never another's. Fall back to sequential if Agents are unavailable.
+Spawn **three Agents in parallel** (single message), each with a fresh context and **only its own brief** — never another's. Keep each agent's ID for §4. Fall back to sequential if Agents are unavailable.
 
 **Agent 1 — Security & breaking changes:**
 - Security: injection, XSS, SSRF, auth bypass, secrets, path traversal
@@ -56,10 +56,16 @@ Verify what's readable (dependency source, installed packages, schemas) instead 
 - **P1 warning** — real risk needing a trigger or specific state: correctness bugs, exploitable-only-under-conditions security gaps, missing tests for changed behavior, load-bearing unverified assumptions (especially ones the PR's own tests bake in, so they read as covered), major DRY/perf/type issues
 - **P2 suggestion** — hardening and clarity with no direct failure path: defense-in-depth, simplification, non-blocking nits
 
-## 4. Report
+## 4. Fix P0/P1 and confirm
 
-Present findings to the user sorted P0→P2, with a count per severity. If none, say so and name residual risk (e.g. missing integration tests).
+Check out the PR branch (`gh pr checkout` in a worktree if it isn't current). Fix every P0 and P1, run the project's checks, and commit. Push only if `gh pr view --json author` is the current `gh` user; otherwise leave the commits local and say so. Leave P2s unfixed.
 
-## 5. Re-review
+Then `SendMessage` each agent that raised a fixed finding: list its findings, the commit SHA, and what changed. Ask it to re-read the code and answer per finding: **confirmed** / **not fixed** (with why) / **new issue introduced**. Fix any rejection and ask again; stop after 3 rounds. Confirm stray-file fixes yourself from the new file list.
+
+## 5. Report
+
+Present findings to the user sorted P0→P2, with a count per severity. Mark each P0/P1 confirmed or still open, with the commit SHA. If none, say so and name residual risk (e.g. missing integration tests).
+
+## 6. Re-review
 
 On "fixes done", re-run on the new head, mark each prior finding resolved / open / partial, share the delta.

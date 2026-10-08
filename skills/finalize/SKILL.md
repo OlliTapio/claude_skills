@@ -19,11 +19,11 @@ continue from Step 4.
 
 ## Step 2: Review PR
 
-Run the `pr-review` skill on the created PR.
+Run the `pr-review` skill on the created PR. It fixes P0/P1 and has its agents confirm.
 
 ## Step 3: Fix and re-review
 
-If P0/P1 issues found: fix them, run quality checks, commit, push, re-review. Max 3 iterations. P2s are non-blocking — proceed.
+If any P0/P1 is still open after pr-review: fix it, run quality checks, commit, push, re-review. Max 3 iterations. P2s are non-blocking — proceed.
 
 ## Step 4: Wait for CI
 
