@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# stdin: <local ref> <local sha> <remote ref> <remote sha>
+zero=0000000000000000000000000000000000000000
+ranges=()
+while read -r _ local_sha _ remote_sha; do
+  [ "$local_sha" = "$zero" ] && continue
+  if [ "$remote_sha" = "$zero" ]; then ranges+=("$local_sha --not --remotes"); else ranges+=("$remote_sha..$local_sha"); fi
+done
+[ ${#ranges[@]} -eq 0 ] && exit 0
+exec "$(git rev-parse --show-toplevel)/.githooks/leak-guard.sh" push "${ranges[@]}"

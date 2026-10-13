@@ -1,0 +1,44 @@
+---
+name: finalize
+description: Create a PR, review it, fix issues, and auto-merge squash. Use when the user wants to ship changes end-to-end in one command — covers PR creation, self-review, fixes, and squash merge.
+---
+
+# Finalize
+
+Create PR → review → fix → squash merge.
+
+## Step 1: Create PR
+
+Run the `pr` skill. Never add or ask for reviewers.
+
+If `gh pr view --json reviewDecision -q .reviewDecision` returns `REVIEW_REQUIRED`,
+stop after Step 3: report the PR URL and that it needs the user's manual review.
+Do not request a review from anyone, and do not merge. Once the user says their manual
+review is done, ask who should review, add them with `gh pr edit --add-reviewer`, then
+continue from Step 4.
+
+## Step 2: Review PR
+
+Run the `pr-review` skill on the created PR.
+
+## Step 3: Check open findings
+
+If pr-review reports any P0/P1 still open, stop: report them with the PR URL. Do not merge. P2s are non-blocking — proceed.
+
+## Step 4: Wait for CI
+
+```bash
+gh pr checks --watch --fail-fast
+```
+
+If CI fails, fix and retry. Max 3 attempts.
+
+## Step 5: Squash merge
+
+```bash
+PR_NUMBER=$(gh pr view --json number -q .number)
+PR_TITLE=$(gh pr view --json title -q .title)
+gh pr merge "$PR_NUMBER" --squash --subject "$PR_TITLE" --delete-branch
+```
+
+Report the merged PR URL.

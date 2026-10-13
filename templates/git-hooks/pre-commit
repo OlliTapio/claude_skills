@@ -1,0 +1,31 @@
+#!/bin/bash
+# Fast quality gate — runs on `git commit` over STAGED files only.
+# Keep this under a few seconds: format, lint, complexity, duplication.
+# Slow checks (types, tests, dead-code) belong in pre-push.
+# Install: git config core.hooksPath .githooks
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+fail() { echo "pre-commit: $1 failed — commit blocked (use --no-verify to bypass)" >&2; exit 1; }
+
+# Staged files, filtered per language block below.
+staged() { git diff --cached --name-only --diff-filter=ACM -- "$@"; }
+
+# --- TypeScript / JavaScript ---
+if [ -f package.json ] && [ -n "$(staged '*.ts' '*.tsx' '*.js' '*.jsx')" ]; then
+  run() { if command -v bun >/dev/null; then bun run "$@"; elif command -v pnpm >/dev/null; then pnpm run "$@"; else npm run "$@"; fi; }
+  run lint    2>&1 || fail "lint"
+  run fmt:check 2>&1 || fail "format"
+  # complexity + duplication run via the linter config / jscpd in `check`; add here if separate.
+fi
+
+# --- Python ---
+if [ -f pyproject.toml ] && [ -n "$(staged '*.py')" ]; then
+  RUFF="ruff"; command -v uv >/dev/null && RUFF="uv run ruff"
+  $RUFF check --force-exclude $(staged '*.py') 2>&1 || fail "ruff (lint+complexity)"
+  $RUFF format --check --force-exclude $(staged '*.py') 2>&1 || fail "ruff format"
+fi
+
+# --- Add a block per additional language (format + lint + complexity) here ---
+
+exit 0

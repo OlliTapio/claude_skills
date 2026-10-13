@@ -1,0 +1,104 @@
+# Claude Skills Repository
+
+Personal Claude Code skills for OlliTapio.
+
+## Leak guard (personal repo — no work content)
+
+`.githooks/` blocks commits and pushes that contain work-related terms or use a non-personal email (allowed: `olli@otl.fi`, the GitHub noreply, Claude's co-author address). Terms live in the gitignored `.githooks/denylist.local` (one case-insensitive regex per line) so they never get committed; the hooks fail closed if it's missing. After cloning:
+
+```bash
+git config core.hooksPath .githooks
+git config user.email olli@otl.fi
+# then create .githooks/denylist.local
+```
+
+Never bypass with `--no-verify`. Generalize real-world examples so no employer, client, product, or internal repo name appears.
+
+## Writing Skills
+
+See `.claude/rules/skill-authoring.md` (auto-loads when editing `skills/**/SKILL.md`).
+
+## Updating Skills
+
+When modifying skills in this repo:
+
+1. Edit the skill files directly in `skills/<skill-name>/SKILL.md`
+2. After making changes, commit and push to this repo:
+   ```bash
+   git add -A && git commit -m "Update <skill-name>: <brief description>" && git push
+   ```
+
+The skills are symlinked from `~/.claude/skills/` to this repo, so changes take effect immediately.
+
+## Adding New Skills
+
+1. Create a new directory: `skills/<skill-name>/`
+2. Add `SKILL.md` with the skill definition
+3. Create the symlink: `ln -s /Users/olli/repositories/claude_skills/skills/<skill-name> ~/.claude/skills/<skill-name>`
+4. Commit and push
+
+## Current Skills
+
+- **plan** - TDD-based planning workflow
+- **pr** - Create PRs with quality checks, review guideline validation, and relevance check
+- **pr-review** - Review GitHub PRs with severity-ranked findings; auto-fixes P0/P1 and has the reviewing agents confirm
+- **explain-diff** - Rich explanation of a code change/diff/PR as an HTML file; adapted from Geoffrey Litt's gist
+- **finalize** - Create PR, review, fix issues, squash merge end-to-end
+- **test-on-main** - Exit worktree, checkout branch on main, merge main, run tests
+- **frontend-design** - Distinctive, production-grade frontend interfaces
+- **analytics-view** - Build analytics surfaces with single-source-of-truth metrics and cross-surface parity tests
+- **rule-authoring** - Write path-scoped or always-on .claude/rules/ files following Anthropic best practices
+- **quality-gates** - Set up a project with language-agnostic code-smell/quality gates via git pre-commit (fast) and pre-push (slow) hooks
+- **setup-project** - Scaffold a new project: LLM-friendly language, layered architecture (controllers/services/repos/views), .claude rules, quality gates
+
+## Global hooks (`global-hooks/`)
+
+Hooks registered in the **user-global** `~/.claude/settings.json`, so they apply to every repo on the machine. Symlinked from this repo (like skills), not copied — unlike `templates/hooks/`, which are project-level and copied into one repo.
+
+- **fetch-default-branch.sh** - fetches `origin/<default-branch>` before Claude Code cuts a worktree, so `worktree.baseRef: fresh` isn't resolved against a stale local ref; also fast-forwards the *local* default branch (what agents read via `git log main` / `git merge main`) when that is provably lossless
+
+Installing one takes two steps — symlink *and* a settings.json registration:
+
+```bash
+mkdir -p ~/.claude/hooks
+ln -s /Users/olli/repositories/claude_skills/global-hooks/<hook>.sh ~/.claude/hooks/<hook>.sh
+# then merge the hook's event registration into ~/.claude/settings.json
+```
+
+See `global-hooks/README.md` for the events, the JSON to merge, and design constraints.
+
+## Templates
+
+Reusable configuration templates in `templates/`:
+
+### Hooks (`templates/hooks/`)
+
+Pre-configured Claude Code hooks for quality enforcement:
+
+```bash
+# Copy to your project
+mkdir -p .claude/hooks
+cp templates/hooks/settings.json .claude/
+cp templates/hooks/*.sh .claude/hooks/
+chmod +x .claude/hooks/*.sh
+```
+
+- **precommit.sh** - Blocks `git commit` if checks fail
+- **lint-fix.sh** - Auto-fixes lint after file edits
+
+See `templates/hooks/README.md` for configuration.
+
+### Git hooks (`templates/git-hooks/`)
+
+Versioned git hooks (run outside Claude too), installed by the `quality-gates` skill:
+
+- **pre-commit** - fast, staged files: format, lint, complexity, duplication
+- **pre-push** - slow, whole repo: types, tests, dead-code
+
+See `templates/git-hooks/README.md`.
+
+### Rules (`templates/rules/`)
+
+Reusable `.claude/rules/*.md` files installed by the `setup-project` skill:
+
+- **layered-architecture.md** - controllers/services/repos/views responsibilities and dependency direction

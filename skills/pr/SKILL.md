@@ -1,0 +1,141 @@
+---
+name: pr
+description: Create a pull request with full quality checks. Use when asked to create a PR, submit changes for review, or prepare code for merging. Runs tests, linting, type checking, analyzes async/blocking code, identifies performance bottlenecks, commits with concise messages, creates PR with bullet summary, and holds reviewer requests until the user has reviewed.
+---
+
+# Pull Request Creation Skill
+
+Create a pull request with comprehensive quality checks and analysis.
+
+## Process
+
+### Step 1: Merge default branch into current branch
+
+Detect the default branch and merge:
+
+```bash
+git fetch origin
+DEFAULT_BRANCH=$(git remote show origin | grep 'HEAD branch' | cut -d' ' -f5)
+git merge "origin/$DEFAULT_BRANCH" -m "Merge $DEFAULT_BRANCH into $(git branch --show-current)"
+```
+
+If merge conflicts occur, stop and inform the user. Do not proceed.
+
+### Step 2: Run quality checks
+
+Discover and run the project's quality checks. Look for:
+- `Makefile` targets (`make check`, `make lint`, `make test`)
+- `package.json` scripts (`npm test`, `npm run lint`)
+- CI config (`.github/workflows/`) to determine what CI runs
+- Language-specific tools (`pytest`, `cargo test`, `go test ./...`)
+
+Run all checks even if some fail, to surface all issues at once. If any fail, show failures and ask user whether to proceed or fix first.
+
+### Step 3: Analyze changes against default branch
+
+```bash
+git diff "origin/$DEFAULT_BRANCH"...HEAD --name-only
+git diff "origin/$DEFAULT_BRANCH"...HEAD
+git log "origin/$DEFAULT_BRANCH"..HEAD --oneline
+```
+
+Analyze: what changed, async/blocking patterns, potential performance issues, code complexity.
+
+### Step 3b: Review against project guidelines
+
+Check the diff against every guideline in `.claude/rules/` and `docs/review.md` (if they exist). Fix violations before proceeding; ask the user if a fix is ambiguous.
+
+### Step 3c: Verify only relevant changes
+
+Flag unrelated features or significant unrelated work that should be in a separate PR. Small incidental fixes are acceptable.
+
+### Step 3d: Drop stray files
+
+From the changed-file list plus untracked files, flag dependency dirs (`node_modules/`, `.venv/`), build output (`dist/`, `build/`, `*.pyc`), local scratch (`tmp*`, `scratch*`, `*.log`, ad-hoc run scripts) and editor/OS junk (`.DS_Store`, `.idea/`). Exempt a dependency or build path whose directory already has tracked files on the default branch; scratch and junk get no exemption.
+
+Tell the user what you found. Untrack tracked files with `git rm --cached <path>`; untracked ones need only a `.gitignore` entry. Match the pattern, not just that path. Ask first when a file's purpose is unclear, and suggest a global ignore or pre-commit hook when the same class keeps coming back.
+
+Env files, keys, certs and tokens are not this case: `git rm --cached` does not unpublish a secret already pushed. Report it and tell the user to rotate it.
+
+### Step 3e: Screenshot UI changes
+
+If the diff touches user-visible UI, use the `run` skill to shoot the changed view into the scratchpad. For an altered view, shoot the same view at the same viewport on a default-branch worktree too.
+
+Never commit screenshots. Attach them at PR creation with `--attach <path>#<alt text>` (gh >= 2.99): a body that references the local path gets it rewritten in place, anything unreferenced is appended.
+
+### Step 4: Commit if needed
+
+If there are uncommitted changes, stage specific files (not `git add .`) and commit:
+
+```bash
+git add <specific-files>
+git commit -m "Brief description"
+```
+
+### Step 5: Push to remote
+
+```bash
+git push -u origin "$(git branch --show-current)"
+```
+
+### Step 6: Create PR
+
+Write the body to answer four questions, each kept short:
+
+```bash
+gh pr create --base "$DEFAULT_BRANCH" --title "Descriptive PR title" \
+  --attach "/abs/path/before.png#Settings page, before" \
+  --attach "/abs/path/after.png#Settings page, after" \
+  --body "$(cat <<'EOF'
+## Why
+[The problem or goal. 1-2 sentences.]
+
+## What
+- [Change 1]
+- [Change 2]
+
+## Screenshots
+| Before | After |
+| --- | --- |
+| ![before](/abs/path/before.png) | ![after](/abs/path/after.png) |
+
+## Implications
+- [Breaking changes, migrations, performance/async effects, follow-ups. Omit if none.]
+
+## How we ensured it works
+- [Tests added/run, manual verification, checks passed.]
+EOF
+)"
+```
+
+If the PR makes an architecture decision, add an `## Architecture` section: state the decision, the alternative rejected, and why in a few lines, and draw it with a Mermaid diagram (GitHub renders it):
+
+````markdown
+## Architecture
+[Decision + rejected alternative + why, kept short.]
+
+```mermaid
+flowchart LR
+  A[Client] --> B[Service] --> C[(DB)]
+```
+````
+
+### Step 7: Reviewers
+
+Check whether the base branch requires an approving review:
+
+```bash
+gh pr view --json reviewDecision -q .reviewDecision
+```
+
+`REVIEW_REQUIRED` means a review gates the merge. In that case do NOT add reviewers.
+Report the PR URL and stop. Once the user says their manual review is done, ask who
+should review and add them.
+
+Otherwise, ask the user who should review, then add them:
+
+```bash
+gh pr edit --add-reviewer username1,username2
+```
+
+PR descriptions: short and skimmable. Lead with why, not just what. Draw out any architecture decision with a Mermaid diagram. Omit `## Screenshots` when nothing user-visible changed; drop the Before column for new views.
