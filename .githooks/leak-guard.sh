@@ -5,7 +5,8 @@
 # case-insensitive extended regex per line) so the terms themselves never
 # get committed. Missing denylist = blocked: fail closed on a fresh clone.
 #
-# Usage: leak-guard.sh staged | message <file> | push <remote-ref-ranges...>
+# Usage: leak-guard.sh staged | message <file> | push <remote-ref-ranges...> | text <label>
+# (text mode checks stdin; the Claude Code edit hook uses it)
 set -euo pipefail
 
 ALLOWED_EMAILS='^(olli@otl\.fi|OlliTapio@users\.noreply\.github\.com|noreply@anthropic\.com)$'
@@ -40,6 +41,9 @@ case "${1:-}" in
   message)
     { grep -v "^#" "$2" || true; } | check_text "commit message"
     ;;
+  text)
+    check_text "${2:-stdin}"
+    ;;
   push)
     shift
     for range in "$@"; do
@@ -52,5 +56,5 @@ case "${1:-}" in
       done < <(git rev-list $range)  # unquoted: range may be "<sha> --not --remotes"
     done
     ;;
-  *) die "usage: leak-guard.sh staged | message <file> | push <ranges...>" ;;
+  *) die "usage: leak-guard.sh staged | message <file> | push <ranges...> | text <label>" ;;
 esac

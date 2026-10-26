@@ -14,6 +14,11 @@ git config user.email olli@otl.fi
 
 Never bypass with `--no-verify`. Generalize real-world examples so no employer, client, product, or internal repo name appears — see `.claude/rules/generic-content.md` (always on).
 
+Claude Code hooks (`.claude/settings.json`) add a layer on top, since the denylist only knows listed terms:
+
+- **Every file edit** — `leak-guard.sh text` checks it against the denylist, and a prompt hook has a model reject real employer/client/product/person names. A block is fed back to Claude to generalize.
+- **`git push`** — `.claude/hooks/review-push.sh` runs the denylist plus a `claude -p` review over all outgoing commits (messages + diffs) and blocks the push on any hit. Fails closed.
+
 ## Writing Skills
 
 See `.claude/rules/skill-authoring.md` (auto-loads when editing `skills/**/SKILL.md`).
