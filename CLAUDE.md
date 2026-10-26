@@ -12,7 +12,7 @@ git config user.email olli@otl.fi
 # then create .githooks/denylist.local
 ```
 
-Never bypass with `--no-verify`. Generalize real-world examples so no employer, client, product, or internal repo name appears.
+Never bypass with `--no-verify`. Generalize real-world examples so no employer, client, product, or internal repo name appears — see `.claude/rules/generic-content.md` (always on).
 
 ## Writing Skills
 
