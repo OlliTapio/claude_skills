@@ -1,0 +1,12 @@
+{
+  "name": "olli-skills",
+  "owner": { "name": "OlliTapio", "email": "olli@otl.fi" },
+  "metadata": { "description": "OlliTapio's personal Claude Code skills." },
+  "plugins": [
+    {
+      "name": "olli-skills",
+      "source": "./",
+      "description": "Personal Claude Code skills: TDD planning, PR creation and review, quality gates, project setup, frontend design, and more."
+    }
+  ]
+}

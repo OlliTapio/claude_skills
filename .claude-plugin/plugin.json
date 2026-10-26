@@ -1,0 +1,6 @@
+{
+  "name": "olli-skills",
+  "description": "Personal Claude Code skills: TDD planning, PR creation and review, quality gates, project setup, frontend design, and more.",
+  "author": { "name": "OlliTapio", "email": "olli@otl.fi" },
+  "repository": "https://github.com/OlliTapio/claude_skills"
+}

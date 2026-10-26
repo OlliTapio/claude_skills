@@ -34,9 +34,9 @@ For unknown languages, use the community-standard tool rather than inventing con
 
 ## 4. Install versioned git hooks
 
-Copy `templates/git-hooks/` into the repo's `.githooks/`, then point git at it:
+Copy `templates/git-hooks/` (at `../../templates/` from this skill's base directory) into the repo's `.githooks/`, then point git at it:
 ```bash
-mkdir -p .githooks && cp <skill-repo>/templates/git-hooks/pre-commit <skill-repo>/templates/git-hooks/pre-push .githooks/
+mkdir -p .githooks && cp <skill-dir>/../../templates/git-hooks/pre-commit <skill-dir>/../../templates/git-hooks/pre-push .githooks/
 chmod +x .githooks/*
 git config core.hooksPath .githooks
 ```

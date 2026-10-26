@@ -27,7 +27,7 @@ Create the directories and one working slice (controller → service → repo �
 
 ## 3. Install .claude rules
 
-- Copy `templates/rules/layered-architecture.md` into `.claude/rules/` — enforces layer responsibilities and dependency direction.
+- Copy `../../templates/rules/layered-architecture.md` (relative to this skill's base directory) into `.claude/rules/` — enforces layer responsibilities and dependency direction.
 - Add project-specific rules with the `rule-authoring` skill (testing, API design, naming).
 
 ## 4. Wire quality gates

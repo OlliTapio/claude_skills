@@ -37,6 +37,21 @@ The skills are symlinked from `~/.claude/skills/` to this repo, so changes take 
 3. Create the symlink: `ln -s /Users/olli/repositories/claude_skills/skills/<skill-name> ~/.claude/skills/<skill-name>`
 4. Commit and push
 
+## Installing as a plugin (cloud sessions)
+
+This repo is also a plugin marketplace (`.claude-plugin/`), so cloud sessions can load the skills. Enable it in a project's `.claude/settings.json`:
+
+```json
+{
+  "extraKnownMarketplaces": {
+    "olli-skills": { "source": { "source": "github", "repo": "OlliTapio/claude_skills" } }
+  },
+  "enabledPlugins": { "olli-skills@olli-skills": true }
+}
+```
+
+Plugin skills are namespaced (`/olli-skills:pr`). `plugin.json` has no `version`, so installs track the latest commit. Skills that read repo files (`templates/`, `references/`) must use paths relative to the skill's base directory, never `~/.claude/skills/...` or a local checkout path. Validate with `claude plugin validate .`. Locally, keep using the symlinks rather than also enabling the plugin, or every skill shows up twice.
+
 ## Current Skills
 
 - **plan** - TDD-based planning workflow
