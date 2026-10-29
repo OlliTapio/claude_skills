@@ -39,3 +39,7 @@ Global hooks are symlinked the same way, plus a `~/.claude/settings.json` entry 
 mkdir -p ~/.claude/hooks
 ln -s "$PWD/global-hooks/fetch-default-branch.sh" ~/.claude/hooks/fetch-default-branch.sh
 ```
+
+## License
+
+MIT (see `LICENSE`), except `skills/frontend-design/`, which is Apache 2.0 (see its `LICENSE.txt`).

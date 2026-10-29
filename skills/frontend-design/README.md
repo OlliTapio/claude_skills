@@ -2,8 +2,7 @@
 
 This skill content is copied from Claude Code's `frontend-design` skill and adapted for Codex use.
 
-Source used:
-- Claude plugin cache path: `/Users/olli/.claude/plugins/cache/claude-plugins-official/frontend-design/aa296ec81e8c/skills/frontend-design/SKILL.md`
+Source: the `frontend-design` skill from Anthropic's official Claude Code plugins (Apache 2.0, see `LICENSE.txt`).
 
 Local adaptation:
 - Replaced one Claude-specific sentence with Codex-specific wording.
